@@ -4230,9 +4230,11 @@
 <div class="max-w-7xl mx-auto px-4 py-6">
 
   <!-- Header -->
-  <header class="mb-6">
-    <h1 class="text-2xl font-bold tracking-tight">📊 Daily Value Bets</h1>
-    <p id="subtitle" class="text-sm text-gray-500 dark:text-gray-400 mt-1">Loading…</p>
+  <header class="mb-6 flex items-start justify-between">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight">📊 Daily Value Bets</h1>
+    </div>
+    <span id="generated-at" class="text-xs text-gray-400 dark:text-gray-500 mt-1 whitespace-nowrap"></span>
   </header>
 
   <!-- Error banner -->
@@ -4294,6 +4296,8 @@
     ligue1:     "bg-emerald-600 dark:bg-emerald-700",         // Ligue 1 — green
   };
 
+  const LEAGUE_SHORT = { ucl: "UCL", epl: "EPL", laliga: "La Liga", seriea: "Serie A", bundesliga: "Bundesliga", ligue1: "Ligue 1" };
+
   function leagueColor(key) {
     return LEAGUE_COLORS[key] || "bg-gray-600 dark:bg-gray-700";
   }
@@ -4310,7 +4314,7 @@
 
   function renderCard(match) {
     const kickoff    = match.kickoff ? formatKickoff(match.kickoff) : "—";
-    const leagueName = match.league_name || "";
+    const leagueName = LEAGUE_SHORT[match.league_key] || match.league_name || "";
     const stageBadge = match.stage
       ? `<span class="inline-block bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium px-2 py-0.5 rounded mb-2 ml-1">${escHtml(match.stage)}</span>`
       : "";
@@ -4677,7 +4681,7 @@
       return `
         <tr class="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
           <td class="py-2 px-4 whitespace-nowrap">
-            <span class="inline-block ${leagueColor(hLeagueKey(h))} text-white text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">${escHtml(h.league_name || "—")}</span>
+            <span class="inline-block ${leagueColor(hLeagueKey(h))} text-white text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">${escHtml(LEAGUE_SHORT[hLeagueKey(h)] || h.league_name || "—")}</span>
           </td>
           <td class="py-2 px-4 text-sm">
             <div><span class="font-medium">${escHtml(h.home_team)}</span>
@@ -4757,7 +4761,6 @@
       : `<div class="text-xs mt-1 text-gray-400 dark:text-gray-500">No settled bets yet</div>`;
 
     // ── Per-league cards HTML ─────────────────────────────────────────────────
-    const LEAGUE_SHORT = { ucl: "UCL", epl: "EPL", laliga: "La Liga", seriea: "Serie A", bundesliga: "Bundesliga", ligue1: "Ligue 1" };
     const leagueCardsHtml = Array.from(leagueMap.values()).map(lg => {
       const lgWins   = lg.settled.filter(h => h.result === "won").length;
       const lgLosses = lg.settled.filter(h => h.result === "lost").length;
@@ -4848,7 +4851,6 @@
     const container = document.getElementById("container");
     const sidebar   = document.getElementById("sidebar");
     const tabBar    = document.getElementById("tab-bar");
-    const subtitle  = document.getElementById("subtitle");
     const errorMsg  = document.getElementById("error-msg");
     const footer    = document.getElementById("footer");
 
@@ -4859,7 +4861,6 @@
       if (!data || !data.value_bets) {
         errorMsg.classList.remove("hidden");
         errorMsg.textContent = "No report found. Run python main.py first to generate today's report.";
-        subtitle.textContent = "—";
         return;
       }
 
@@ -4885,7 +4886,6 @@
         data.value_bets = Array.from(matchMap.values());
       }
 
-      subtitle.textContent = data.date ? formatDate(data.date + "T00:00:00") : "Today";
 
       if (data.value_bets.length === 0) {
         container.innerHTML = `
@@ -4899,7 +4899,7 @@
       const leagueMap = new Map();
       for (const match of data.value_bets) {
         const key = match.league_key || "other";
-        if (!leagueMap.has(key)) leagueMap.set(key, { key, name: match.league_name || key, bets: [] });
+        if (!leagueMap.has(key)) leagueMap.set(key, { key, name: LEAGUE_SHORT[key] || match.league_name || key, bets: [] });
         leagueMap.get(key).bets.push(match);
       }
       const history = data.history || [];
@@ -5017,7 +5017,19 @@
 
       if (data.generated_at) {
         const gen = new Date(data.generated_at);
-        footer.textContent = `Generated at ${gen.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+        const now = new Date();
+        const diffMs = now - gen;
+        const diffDays = Math.floor(diffMs / 86400000);
+        const timeStr = gen.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+        let label;
+        if (diffDays === 0) label = `Today at ${timeStr}`;
+        else if (diffDays === 1) label = `Yesterday at ${timeStr}`;
+        else if (diffDays < 7) label = `${diffDays} days ago at ${timeStr}`;
+        else if (diffDays < 30) label = "Last week";
+        else label = "Last month";
+        footer.textContent = `Generated ${label}`;
+        const genAt = document.getElementById("generated-at");
+        if (genAt) genAt.textContent = `Generated ${label}`;
       }
 
     } catch (err) {

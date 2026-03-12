@@ -1,0 +1,48 @@
+name: Daily Value Bets Updater
+
+on:
+  schedule:
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-betting-engine:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create logs directory
+        run: mkdir -p logs
+
+      - name: Run main.py
+        env:
+          THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+          FOOTBALL_DATA_ORG_API_KEY: ${{ secrets.FOOTBALL_DATA_ORG_API_KEY }}
+          ENABLED_LEAGUES: ${{ vars.ENABLED_LEAGUES || '' }}
+          EV_THRESHOLD: ${{ vars.EV_THRESHOLD || '0.05' }}
+          ROLLING_WINDOW: ${{ vars.ROLLING_WINDOW || '5' }}
+          POISSON_MAX_GOALS: ${{ vars.POISSON_MAX_GOALS || '8' }}
+          ODDS_TOTALS_BOOKMAKERS: ${{ vars.ODDS_TOTALS_BOOKMAKERS || 'pinnacle' }}
+        run: python main.py
+
+      - name: Commit updated report
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add report.html
+          git commit -m "🤖 Auto-update daily value bets [skip ci]" || echo "No changes to commit"
+          git push
