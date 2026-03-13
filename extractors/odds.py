@@ -158,6 +158,22 @@ class OddsAPIClient:
             if over_2_5_odds is not None and under_2_5_odds is not None:
                 break
 
+        # Parse bts (both teams to score) market.
+        btts_yes_odds = None
+        btts_no_odds = None
+        for bk_entry in ordered_bks:
+            entry_markets = {m["key"]: m for m in bk_entry.get("markets", [])}
+            bts = entry_markets.get("btts")
+            if not bts:
+                continue
+            for outcome in bts.get("outcomes", []):
+                if outcome["name"] == "Yes" and btts_yes_odds is None:
+                    btts_yes_odds = outcome["price"]
+                elif outcome["name"] == "No" and btts_no_odds is None:
+                    btts_no_odds = outcome["price"]
+            if btts_yes_odds is not None and btts_no_odds is not None:
+                break
+
         return {
             "match_id": match_id,
             "home_team": home_team,
@@ -168,5 +184,67 @@ class OddsAPIClient:
             "away_odds": away_odds,
             "over_2_5_odds": over_2_5_odds,
             "under_2_5_odds": under_2_5_odds,
+            "btts_yes_odds": btts_yes_odds,
+            "btts_no_odds": btts_no_odds,
             "bookmaker": primary_bk["key"],
         }
+
+    def fetch_btts_odds(
+        self,
+        sport: str,
+        event_ids: list[str],
+        btts_bookmakers: str,
+    ) -> dict[str, tuple[float | None, float | None]]:
+        """
+        Fetches BTTS (both teams to score) odds for a list of event IDs using the
+        per-event endpoint (the only endpoint that supports the `btts` market).
+
+        Returns {event_id: (btts_yes_odds, btts_no_odds)}.
+        Each call costs 1 API quota unit, so this is called only when
+        ODDS_BTTS_BOOKMAKERS is configured.
+        """
+        bk_list = [b.strip() for b in btts_bookmakers.split(",") if b.strip()]
+        if not bk_list:
+            return {}
+
+        results: dict[str, tuple[float | None, float | None]] = {}
+        for event_id in event_ids:
+            url = f"{BASE_URL}/v4/sports/{sport}/events/{event_id}/odds/"
+            params = {
+                "apiKey": self.api_key,
+                "regions": self.region,
+                "markets": "btts",
+                "bookmakers": ",".join(bk_list),
+                "oddsFormat": self.odds_format,
+            }
+            try:
+                response = requests.get(url, params=params, timeout=15)
+                quota_header = response.headers.get("x-requests-remaining")
+                if quota_header is not None:
+                    self._quota_remaining = int(quota_header)
+                    if self._quota_remaining < 10:
+                        logger.warning("Quota critically low (%s); stopping BTTS fetch.", self._quota_remaining)
+                        break
+                if not response.ok:
+                    logger.debug("BTTS fetch for %s returned %s — skipping.", event_id, response.status_code)
+                    results[event_id] = (None, None)
+                    continue
+                data = response.json()
+                yes_odds = None
+                no_odds = None
+                for bk in data.get("bookmakers", []):
+                    for market in bk.get("markets", []):
+                        if market["key"] != "btts":
+                            continue
+                        for outcome in market.get("outcomes", []):
+                            if outcome["name"] == "Yes" and yes_odds is None:
+                                yes_odds = outcome["price"]
+                            elif outcome["name"] == "No" and no_odds is None:
+                                no_odds = outcome["price"]
+                    if yes_odds is not None and no_odds is not None:
+                        break
+                results[event_id] = (yes_odds, no_odds)
+            except Exception as exc:
+                logger.debug("BTTS fetch error for %s: %s", event_id, exc)
+                results[event_id] = (None, None)
+        return results

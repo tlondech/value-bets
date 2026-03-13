@@ -60,6 +60,7 @@ class Config:
     odds_market: str = "h2h"
     odds_format: str = "decimal"
     odds_totals_bookmakers: str = ""   # extra bookmakers for O/U 2.5 fallback (e.g. "pinnacle")
+    odds_btts_bookmakers: str = ""     # bookmakers for BTTS per-event fetch (e.g. "williamhill,pinnacle"); empty = disabled
 
     # Model settings
     ev_threshold: float = 0.05
@@ -116,4 +117,5 @@ def load_config() -> Config:
         rolling_window=int(os.getenv("ROLLING_WINDOW", "5")),
         poisson_max_goals=int(os.getenv("POISSON_MAX_GOALS", "8")),
         odds_totals_bookmakers=os.getenv("ODDS_TOTALS_BOOKMAKERS", ""),
+        odds_btts_bookmakers=os.getenv("ODDS_BTTS_BOOKMAKERS", ""),
     )

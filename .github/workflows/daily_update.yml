@@ -2,7 +2,7 @@ name: Daily Value Bets Updater
 
 on:
   schedule:
-    - cron: '0 10 * * *'
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -37,6 +37,7 @@ jobs:
           ROLLING_WINDOW: ${{ vars.ROLLING_WINDOW || '5' }}
           POISSON_MAX_GOALS: ${{ vars.POISSON_MAX_GOALS || '8' }}
           ODDS_TOTALS_BOOKMAKERS: ${{ vars.ODDS_TOTALS_BOOKMAKERS || 'pinnacle' }}
+          ODDS_BTTS_BOOKMAKERS: ${{ vars.ODDS_BTTS_BOOKMAKERS || 'williamhill,pinnacle' }}
         run: python main.py --fetch
 
       - name: Commit updated report
