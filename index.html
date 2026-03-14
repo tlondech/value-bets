@@ -29,8 +29,6 @@
 
     th.sortable { cursor:pointer; user-select:none; white-space:nowrap; }
     th.sortable:hover { opacity:0.75; }
-    .sort-icon { display:inline-block; margin-left:4px; opacity:0.4; font-size:0.7em; }
-    th.sort-asc .sort-icon, th.sort-desc .sort-icon { opacity:1; }
 
     /* Filter drawer */
     #filter-drawer {
@@ -781,11 +779,8 @@ function renderHistory() {
   const thead = document.getElementById("hist-thead");
   thead.innerHTML = "<tr>" + HIST_COLS.map(c => {
     const sk = c.sortKey||c.key;
-    const isActive = sk===histSortCol;
-    const icon = isActive?(histSortDir==="desc"?"▼":"▲"):"⇕";
-    const dirCls = isActive?`sort-${histSortDir}`:"";
     const align = c.align==="right"?"text-right":c.align==="center"?"text-center":"text-left";
-    return `<th class="sortable px-4 py-3 ${align} ${dirCls}" data-col="${sk}">${esc(c.label)}<span class="sort-icon">${icon}</span></th>`;
+    return `<th class="sortable px-4 py-3 ${align}" data-col="${sk}">${esc(c.label)}</th>`;
   }).join("") + "</tr>";
   thead.querySelectorAll("th.sortable").forEach(th => {
     th.addEventListener("click", () => {
