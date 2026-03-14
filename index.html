@@ -211,75 +211,97 @@
 
 <!-- ── Help / Legend modal ───────────────────────────────────── -->
 <div id="legend-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden">
-  <div class="bg-gray-900 border border-gray-800 rounded-xl w-[90vw] max-w-md max-h-[85vh] flex flex-col">
+  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl w-[90vw] max-w-md max-h-[85vh] flex flex-col">
 
     <!-- Modal header -->
-    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-      <h2 class="text-base font-semibold text-gray-100">How to read this</h2>
-      <button id="close-legend-btn" class="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 text-lg leading-none">&times;</button>
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">How to read this</h2>
+      <button id="close-legend-btn" class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 text-lg leading-none">&times;</button>
     </div>
 
     <!-- Modal body -->
-    <div class="overflow-y-auto px-5 py-5 space-y-6 text-sm text-gray-400">
+    <div class="overflow-y-auto px-5 py-5 space-y-6 text-sm text-gray-500 dark:text-gray-400/90">
 
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Bet Types</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Bet Types</p>
         <div class="space-y-2">
           <div class="flex justify-between">
-            <span class="text-gray-300">Home Win / Draw / Away Win</span>
-            <span class="text-gray-500">1X2 market</span>
+            <span class="text-gray-700 dark:text-gray-300">Home Win / Draw / Away Win</span>
+            <span class="text-gray-400 dark:text-gray-500">1X2 market</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-300">Over 2.5 / Under 2.5</span>
-            <span class="text-gray-500">Total goals</span>
+            <span class="text-gray-700 dark:text-gray-300">Over 2.5 / Under 2.5</span>
+            <span class="text-gray-400 dark:text-gray-500">Total goals</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-300">BTTS Yes / BTTS No</span>
-            <span class="text-gray-500">Both teams score</span>
+            <span class="text-gray-700 dark:text-gray-300">BTTS Yes / BTTS No</span>
+            <span class="text-gray-400 dark:text-gray-500">Both teams score</span>
           </div>
         </div>
       </div>
 
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Card Indicators</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Card Indicators</p>
         <div class="space-y-3">
-          <div class="flex items-start gap-3">
-            <span class="text-amber-500 font-medium shrink-0 mt-0.5">⏱ 3d</span>
+          <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
+            <span class="text-amber-500 font-medium mt-0.5">⏱ 3d</span>
             <span>Short rest — team's last match was fewer than 4 days ago. May affect performance.</span>
           </div>
-          <div class="flex items-start gap-3">
-            <span class="bg-sky-900/40 text-sky-300 px-1.5 py-0.5 rounded text-xs shrink-0 mt-0.5">H2H</span>
+          <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
+            <span class="bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-1.5 py-0.5 rounded text-xs mt-0.5 inline-block">H2H</span>
             <span>Head-to-head history was used to adjust the probability estimate.</span>
           </div>
-          <div class="flex items-start gap-3">
-            <span class="flex gap-1 shrink-0 mt-0.5">
-              <span class="form-w inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold">W</span>
-              <span class="form-d inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold">D</span>
-              <span class="form-l inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold">L</span>
-            </span>
-            <span>Recent form — last 5 matches, most recent on the right.</span>
+          <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
+            <span class="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 rounded text-xs font-semibold mt-0.5 inline-block">2nd Leg</span>
+            <span>Second leg of a knockout tie. Aggregate score shown alongside when available.</span>
           </div>
-          <div class="flex items-start gap-3">
-            <span class="ev-warning shrink-0 mt-0.5">+XX% ⚠</span>
-            <span>High EV (&ge;20%) — unusually wide edge, double-check the line before betting.</span>
+          <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
+            <span class="flex gap-1 items-center mt-0.5">
+              <span class="bg-green-500 inline-block w-2.5 h-2.5 rounded-full" title="Win"></span>
+              <span class="bg-gray-400 inline-block w-2.5 h-2.5 rounded-full" title="Draw"></span>
+              <span class="bg-red-500 inline-block w-2.5 h-2.5 rounded-full" title="Loss"></span>
+            </span>
+            <span>Recent form — last 5 matches (green&nbsp;W, grey&nbsp;D, red&nbsp;L), oldest on the left.</span>
+          </div>
+          <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
+            <span class="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-[11px] font-medium shrink-0 mt-0.5 w-max">4th</span>
+            <span>League table rank shown next to the team name.</span>
           </div>
         </div>
       </div>
 
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Columns</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">EV Colour Coding</p>
+        <div class="space-y-2">
+          <div class="grid grid-cols-[80px_1fr] gap-3 items-start">
+            <span class="ev-success mt-0.5">+8.5%</span>
+            <span>Normal edge — good value bet.</span>
+          </div>
+          <div class="grid grid-cols-[80px_1fr] gap-3 items-start">
+            <span class="ev-warning mt-0.5">+14.2%</span>
+            <span>High edge (&ge;10%) — strong value, verify the odds are still available.</span>
+          </div>
+          <div class="grid grid-cols-[80px_1fr] gap-3 items-start">
+            <span class="ev-danger mt-0.5">+23.1% ⚠</span>
+            <span>Very high edge (&ge;20%) — unusually wide; double-check the line before betting.</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Columns</p>
         <div class="space-y-2">
           <div class="flex justify-between">
-            <span class="text-gray-300">Odds</span>
-            <span class="text-gray-500">Bookmaker decimal odds</span>
+            <span class="text-gray-700 dark:text-gray-300">Odds</span>
+            <span class="text-gray-400 dark:text-gray-500">Bookmaker decimal odds</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-300">Prob%</span>
-            <span class="text-gray-500">Model's true probability</span>
+            <span class="text-gray-700 dark:text-gray-300">Prob</span>
+            <span class="text-gray-400 dark:text-gray-500">Model's true probability</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-300">EV%</span>
-            <span class="text-gray-500">Edge over the bookmaker</span>
+            <span class="text-gray-700 dark:text-gray-300">EV</span>
+            <span class="text-gray-400 dark:text-gray-500">Edge over the bookmaker</span>
           </div>
         </div>
       </div>
