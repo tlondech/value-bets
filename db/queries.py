@@ -1,0 +1,307 @@
+"""
+SQLite DB read/write helpers.
+All functions that interact directly with the local SQLite database via SQLAlchemy.
+"""
+
+import logging
+from datetime import datetime, timedelta, timezone
+
+import pandas as pd
+from sqlalchemy.orm import Session
+
+from db.schema import BetHistory, Fixture, Match, Odds
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Upsert helpers
+# ---------------------------------------------------------------------------
+
+def upsert_match(session: Session, event: dict, league_key: str) -> None:
+    existing = session.get(Match, event["match_id"])
+    if existing is None:
+        session.add(Match(
+            match_id=event["match_id"],
+            home_team=event["home_team"],
+            away_team=event["away_team"],
+            match_date=event["commence_time"],
+            league=league_key,
+            status="upcoming",
+            stage=event.get("stage"),
+        ))
+    elif event.get("stage") and existing.stage != event["stage"]:
+        existing.stage = event["stage"]
+
+
+def upsert_odds(session: Session, event: dict) -> None:
+    session.query(Odds).filter(
+        Odds.match_id == event["match_id"],
+        Odds.bookmaker == event["bookmaker"],
+        Odds.market == "h2h",
+    ).delete()
+    session.add(Odds(
+        match_id=event["match_id"],
+        bookmaker=event["bookmaker"],
+        market="h2h",
+        home_odds=event["home_odds"],
+        draw_odds=event["draw_odds"],
+        away_odds=event["away_odds"],
+        fetched_at=datetime.now(tz=timezone.utc),
+    ))
+    if event.get("over_2_5_odds") is not None or event.get("under_2_5_odds") is not None:
+        session.query(Odds).filter(
+            Odds.match_id == event["match_id"],
+            Odds.market == "totals",
+        ).delete()
+        session.add(Odds(
+            match_id=event["match_id"],
+            bookmaker=event["bookmaker"],
+            market="totals",
+            home_odds=event.get("over_2_5_odds"),
+            away_odds=event.get("under_2_5_odds"),
+            fetched_at=datetime.now(tz=timezone.utc),
+        ))
+
+
+def upsert_fixtures(session: Session, raw_fixtures: list[dict], league_key: str, season: int) -> None:
+    existing_ids = {fid for (fid,) in session.query(Fixture.fixture_id).all()}
+    new_fixtures = [f for f in raw_fixtures if f["fixture_id"] not in existing_ids]
+    for f in new_fixtures:
+        session.add(Fixture(
+            fixture_id=f["fixture_id"],
+            league_id=league_key,
+            season=season,
+            fixture_date=f["fixture_date"],
+            home_team=f["home_team"],
+            away_team=f["away_team"],
+            home_goals=f["home_goals"],
+            away_goals=f["away_goals"],
+            home_xg=f.get("home_xg"),
+            away_xg=f.get("away_xg"),
+        ))
+    logger.debug("[DB] Inserted %d new fixtures.", len(new_fixtures))
+
+
+# ---------------------------------------------------------------------------
+# Load helpers
+# ---------------------------------------------------------------------------
+
+def load_upcoming_events_from_db(session: Session, league_key: str) -> list[dict]:
+    """Loads upcoming matches with stored odds from the DB, returning the same format as fetch_upcoming_odds()."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    matches = session.query(Match).filter(
+        Match.league == league_key,
+        Match.status == "upcoming",
+        Match.match_date > now,
+    ).all()
+    events = []
+    for match in matches:
+        h2h = session.query(Odds).filter(
+            Odds.match_id == match.match_id,
+            Odds.market == "h2h",
+        ).order_by(Odds.fetched_at.desc()).first()
+        if h2h is None:
+            continue
+        totals = session.query(Odds).filter(
+            Odds.match_id == match.match_id,
+            Odds.market == "totals",
+        ).order_by(Odds.fetched_at.desc()).first()
+        events.append({
+            "match_id": match.match_id,
+            "home_team": match.home_team,
+            "away_team": match.away_team,
+            "commence_time": match.match_date.replace(tzinfo=timezone.utc),
+            "home_odds": h2h.home_odds,
+            "draw_odds": h2h.draw_odds,
+            "away_odds": h2h.away_odds,
+            "over_2_5_odds": totals.home_odds if totals else None,
+            "under_2_5_odds": totals.away_odds if totals else None,
+            "bookmaker": h2h.bookmaker,
+            "stage": match.stage,
+        })
+    return events
+
+
+def load_raw_fixtures_from_db(session: Session, league_key: str, season: int) -> list[dict]:
+    """Loads finished fixtures for a league/season from the DB, returning the same format as fetch_fixtures()."""
+    rows = session.query(Fixture).filter(
+        Fixture.league_id == league_key,
+        Fixture.season == season,
+    ).all()
+    return [{
+        "fixture_id": r.fixture_id,
+        "fixture_date": r.fixture_date,
+        "home_team": r.home_team,
+        "away_team": r.away_team,
+        "home_goals": r.home_goals,
+        "away_goals": r.away_goals,
+        "home_xg": r.home_xg,
+        "away_xg": r.away_xg,
+    } for r in rows]
+
+
+def load_h2h_fixtures_df(session: Session, league_key: str, current_season: int, n_seasons: int = 3):
+    """Loads finished fixtures for a league across the last n_seasons (including current) for H2H lookups."""
+    seasons = [current_season - i for i in range(n_seasons)]
+    rows = session.query(Fixture).filter(
+        Fixture.league_id == league_key,
+        Fixture.season.in_(seasons),
+    ).all()
+    if not rows:
+        return pd.DataFrame(columns=["fixture_date", "home_team", "away_team",
+                                     "home_goals", "away_goals", "home_goals_eff", "away_goals_eff"])
+    df = pd.DataFrame([{
+        "fixture_date": r.fixture_date,
+        "home_team": r.home_team,
+        "away_team": r.away_team,
+        "home_goals": r.home_goals,
+        "away_goals": r.away_goals,
+        "home_xg": r.home_xg,
+        "away_xg": r.away_xg,
+    } for r in rows])
+    df["fixture_date"] = pd.to_datetime(df["fixture_date"], utc=True)
+    df["home_goals_eff"] = df["home_xg"].where(df["home_xg"].notna(), df["home_goals"])
+    df["away_goals_eff"] = df["away_xg"].where(df["away_xg"].notna(), df["away_goals"])
+    return df
+
+
+def load_all_fixtures_df(engine, universal_names: dict | None = None):
+    """Loads all finished fixtures from every league in the DB as a DataFrame.
+
+    If universal_names is provided, team names are normalized to a common canonical
+    form so that cross-league rest-day lookups work (e.g. 'Liverpool FC' → 'Liverpool').
+    """
+    with Session(engine) as session:
+        rows = session.query(Fixture).all()
+    if not rows:
+        return pd.DataFrame(columns=["fixture_date", "home_team", "away_team",
+                                     "home_goals", "away_goals", "home_goals_eff", "away_goals_eff"])
+    norm = universal_names or {}
+    df = pd.DataFrame([{
+        "fixture_date": r.fixture_date,
+        "home_team": norm.get(r.home_team, r.home_team),
+        "away_team": norm.get(r.away_team, r.away_team),
+        "home_goals": r.home_goals,
+        "away_goals": r.away_goals,
+        "home_xg": r.home_xg,
+        "away_xg": r.away_xg,
+    } for r in rows])
+    df["fixture_date"] = pd.to_datetime(df["fixture_date"], utc=True)
+    df["home_goals_eff"] = df["home_xg"].where(df["home_xg"].notna(), df["home_goals"])
+    df["away_goals_eff"] = df["away_xg"].where(df["away_xg"].notna(), df["away_goals"])
+    return df
+
+
+# ---------------------------------------------------------------------------
+# Bet history helpers
+# ---------------------------------------------------------------------------
+
+def save_bets_to_history(session, match_bets_list: list[dict], recorded_date: str) -> int:
+    """
+    Persists each recommended bet in match_bets_list to bet_history.
+    Skips duplicates (same kickoff + teams + outcome already exists).
+    Returns the number of newly inserted rows.
+    """
+    inserted = 0
+    for m in match_bets_list:
+        kickoff_dt = datetime.fromisoformat(m["kickoff"]).replace(tzinfo=None)
+        home_c = m.get("home_canonical")
+        away_c = m.get("away_canonical")
+        for b in m["bets"]:
+            exists = session.query(BetHistory).filter_by(
+                kickoff=kickoff_dt,
+                home_team=m["home_team"],
+                away_team=m["away_team"],
+                outcome=b["outcome"],
+            ).first()
+            if exists:
+                if not exists.settled:
+                    exists.odds      = b["odds"]
+                    exists.true_prob = b["true_prob"]
+                    exists.ev        = b["ev"]
+                continue
+            session.add(BetHistory(
+                recorded_date=recorded_date,
+                league_key=m["league_key"],
+                league_name=m["league_name"],
+                home_team=m["home_team"],
+                away_team=m["away_team"],
+                home_canonical=home_c,
+                away_canonical=away_c,
+                kickoff=kickoff_dt,
+                stage=m.get("stage"),
+                outcome=b["outcome"],
+                outcome_label=b["outcome_label"],
+                odds=b["odds"],
+                true_prob=b["true_prob"],
+                ev=b["ev"],
+            ))
+            inserted += 1
+    return inserted
+
+
+def settle_bets(session) -> int:
+    """
+    Resolves unsettled bets whose kickoff is in the past by matching
+    results from the Fixture table. Returns the number of newly settled bets.
+    """
+    now = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC for SQLite comparison
+    unsettled = session.query(BetHistory).filter(
+        BetHistory.settled == False,  # noqa: E712
+        BetHistory.kickoff < now,
+    ).all()
+
+    settled_count = 0
+    for bet in unsettled:
+        fixture = session.query(Fixture).filter(
+            Fixture.home_team == bet.home_canonical,
+            Fixture.away_team == bet.away_canonical,
+            Fixture.fixture_date >= bet.kickoff - timedelta(days=1),
+            Fixture.fixture_date <= bet.kickoff + timedelta(days=1),
+        ).first()
+
+        if fixture is None:
+            continue  # result not yet available — will retry on next run
+
+        hg, ag = fixture.home_goals, fixture.away_goals
+        won = {
+            "home_win":  hg > ag,
+            "draw":      hg == ag,
+            "away_win":  ag > hg,
+            "over_2_5":  hg + ag > 2,
+            "under_2_5": hg + ag <= 2,
+        }.get(bet.outcome, False)
+
+        bet.settled = True
+        bet.result = "won" if won else "lost"
+        bet.actual_home_goals = hg
+        bet.actual_away_goals = ag
+        bet.settled_at = now
+        settled_count += 1
+
+    return settled_count
+
+
+def load_bet_history(session) -> list[dict]:
+    """Returns all bet history rows as dicts, ordered newest first."""
+    rows = session.query(BetHistory).order_by(BetHistory.kickoff.desc()).all()
+    return [
+        {
+            "recorded_date":     r.recorded_date,
+            "league_name":       r.league_name,
+            "home_team":         r.home_team,
+            "away_team":         r.away_team,
+            "kickoff":           r.kickoff.isoformat(),
+            "stage":             r.stage,
+            "outcome_label":     r.outcome_label,
+            "odds":              r.odds,
+            "true_prob":         r.true_prob,
+            "ev":                r.ev,
+            "settled":           r.settled,
+            "result":            r.result,
+            "actual_home_goals": r.actual_home_goals,
+            "actual_away_goals": r.actual_away_goals,
+        }
+        for r in rows
+    ]

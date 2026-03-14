@@ -265,11 +265,11 @@
             <span>Short rest — team's last match was fewer than 4 days ago. May affect performance.</span>
           </div>
           <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-            <span class="bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-1.5 py-0.5 rounded text-xs mt-0.5 inline-block">H2H</span>
+            <span class="bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 py-0.5 rounded text-xs mt-0.5 inline-block">H2H</span>
             <span>Head-to-head history was used to adjust the probability estimate.</span>
           </div>
           <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-            <span class="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 rounded text-xs font-semibold mt-0.5 inline-block">2nd Leg</span>
+            <span class="bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 py-0.5 rounded text-xs font-semibold mt-0.5 inline-block">2nd Leg</span>
             <span>Second leg of a knockout tie. Aggregate score shown alongside when available.</span>
           </div>
           <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
@@ -575,7 +575,7 @@ function renderCard(m, opts = {}) {
       <div class="flex flex-wrap items-center gap-2 mr-3">
         ${leagueBadge(m.league_key, badgeText)}
         ${m.is_second_leg ? `<span class="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded font-semibold whitespace-nowrap flex items-center gap-1">2nd Leg ${m.agg_home != null ? '<span class="opacity-70 font-normal">| Agg ' + m.agg_home + '–' + m.agg_away + '</span>' : ''}</span>` : ""}
-        ${m.h2h_used ? `<span class="text-xs bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-1.5 rounded">H2H</span>` : ""}
+        ${m.h2h_used ? `<span class="text-xs bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 rounded">H2H</span>` : ""}
       </div>
       <div class="flex items-center gap-2 shrink-0">
         ${score}
