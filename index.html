@@ -169,15 +169,15 @@
         <p class="text-base font-bold whitespace-nowrap">—</p>
       </div>
       <div id="stat-avg-odds" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg Odds</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg Odds · EV</p>
         <p class="text-base font-bold whitespace-nowrap">—</p>
       </div>
-      <div id="stat-record-combined" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Record &amp; Win%</p>
+      <div id="stat-record" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Record</p>
         <p class="text-base font-bold whitespace-nowrap">—</p>
       </div>
-      <div id="stat-avgev"   class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
-        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg EV</p>
+      <div id="stat-winrate" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Win Rate</p>
         <p class="text-base font-bold whitespace-nowrap">—</p>
       </div>
       <div id="stat-pnl"     class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 sm:col-span-1 col-span-2 relative">
@@ -725,15 +725,17 @@ function updateStatsGrid(filteredData) {
     ? [...wins, ...losses].reduce((s, r) => s + (r.true_prob || 0), 0)
     : 0;
 
-  // Record & Win% — win rate colored vs expected wins
-  const winRatePct = settled ? (wins.length / settled * 100).toFixed(1) : null;
+  // Record — wins vs expected wins
+  const recordHtml = settled
+    ? `${wins.length}W <span class="text-sm font-medium text-gray-400 dark:text-gray-500 mx-0.5">/ ${expectedWins.toFixed(1)}EW</span>`
+    : "—";
+
+  // Win rate — colored vs expected
   const winRateColor = settled
     ? (wins.length >= expectedWins ? "text-green-500" : "text-red-500")
     : "";
-
-  // Format: "6W / 8.2EW (33.3%)"
-  const recordHtml = settled
-    ? `${wins.length}W / <span class="text-gray-400 dark:text-gray-500">${expectedWins.toFixed(1)}EW</span> (<span class="${winRateColor}">${winRatePct}%</span>)`
+  const winRateHtml = settled
+    ? `<span class="${winRateColor}">${(wins.length / settled * 100).toFixed(1)}%</span>`
     : "—";
 
   // P&L and ROI — tiered stake, settled rows only
@@ -762,9 +764,11 @@ function updateStatsGrid(filteredData) {
   };
 
   setVal("stat-total",    filteredData.length);
-  setVal("stat-avg-odds", avgOdds);
-  setHtml("stat-record-combined", recordHtml);
-  setVal("stat-avgev",    avgEv);
+  setHtml("stat-avg-odds", avgOdds !== "—"
+    ? `${avgOdds} <span class="text-sm font-medium text-gray-400 dark:text-gray-500">/ ${avgEv}</span>`
+    : "—");
+  setHtml("stat-record",  recordHtml);
+  setHtml("stat-winrate", winRateHtml);
   setHtml("stat-pnl",     pnlStr);
 
   // Colour P&L green/red
