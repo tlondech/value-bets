@@ -428,6 +428,22 @@ def run_league_pipeline(
         with Session(engine) as session:
             upsert_fixtures(session, raw_fixtures, league.key, season)
             session.commit()
+
+        # Also fetch prior season for multi-season H2H context (non-fatal)
+        prior_season = season - 1
+        try:
+            if league.fd_code is not None:
+                prior_fixtures = FootballDataClient(league.fd_code, prior_season).fetch_fixtures()
+            else:
+                prior_fixtures = FootballDataOrgClient(league.fdo_code, prior_season, cfg.fdo_api_key).fetch_fixtures()  # type: ignore[arg-type]
+            if prior_fixtures:
+                with Session(engine) as session:
+                    upsert_fixtures(session, prior_fixtures, league.key, prior_season)
+                    session.commit()
+                logger.debug("[%s] Fetched %d prior-season fixtures for H2H.", league.key, len(prior_fixtures))
+        except Exception as e:
+            logger.debug("[%s] Could not fetch prior-season fixtures (%d): %s", league.key, prior_season, e)
+
     else:
         # Load from DB — no API calls
         p = Path(cfg.crest_map_path)

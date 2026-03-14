@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 _FATIGUE_THRESHOLD = 4   # days since last match → team considered fatigued
 _FATIGUE_FACTOR    = 1.08  # ~8% more goals conceded when fatigued
 _H2H_BLEND        = 0.30   # weight of H2H stats vs form-based stats
-_H2H_MIN_FIXTURES = 3      # minimum H2H fixtures to apply blend
+_H2H_MIN_FIXTURES = 2      # minimum H2H fixtures to apply blend
 
 
 def _apply_agg_adjustment(
