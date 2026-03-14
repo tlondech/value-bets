@@ -10,7 +10,7 @@ Pipeline (per enabled league):
   5. Upsert fixtures into SQLite
   6. Build Poisson features per match
   7. Calculate Expected Value → collect value bets
-  8. Merge all leagues, write report JSON + open index.html in browser
+  8. Merge all leagues, push value bets to Supabase bet_history table
 """
 
 import argparse
@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import time
+import webbrowser
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -40,7 +41,7 @@ from models.features import (
     load_team_name_map,
     resolve_team_name,
 )
-from notifications.reporter import open_report, write_report_json
+from supabase import create_client, Client
 
 # ---------------------------------------------------------------------------
 # Logging setup
@@ -339,15 +340,14 @@ def run_league_pipeline(
     engine,
     name_map: dict,
     force: bool = False,
-) -> list[dict]:
+) -> tuple[list[dict], list[dict]]:
     """
     Runs the full extraction → evaluation pipeline for one league.
-    Returns a (possibly empty) list of value bet dicts.
-    Any recoverable failure logs an error and returns [].
+    Returns (value_bets, raw_fixtures). Both lists are empty on any recoverable failure.
     """
     if league.fd_code is None and league.fdo_code is None:
         logger.debug("[%s] No data source configured — skipping.", league.key)
-        return []
+        return [], []
 
     season = league.season_override if league.season_override is not None else _current_season()
     logger.debug(
@@ -378,7 +378,7 @@ def run_league_pipeline(
 
         if not upcoming_events:
             logger.debug("[%s] No upcoming matches with Winamax odds — skipping.", league.key)
-            return []
+            return [], []
 
         # Optional: fetch BTTS odds per-event (costs 1 quota unit per match)
         if cfg.odds_btts_bookmakers:
@@ -420,14 +420,14 @@ def run_league_pipeline(
                 raw_fixtures = FootballDataOrgClient(league.fdo_code, season, cfg.fdo_api_key).fetch_fixtures()  # type: ignore[arg-type]
         except (FootballDataError, FootballDataOrgError) as e:
             logger.error("[%s] Failed to fetch fixtures: %s — skipping league.", league.display_name, e)
-            return []
+            return [], []
 
         if not raw_fixtures:
             logger.warning(
                 "[%s] No finished fixtures found — season may not have started yet. Skipping.",
                 league.key,
             )
-            return []
+            return [], []
 
         with Session(engine) as session:
             upsert_fixtures(session, raw_fixtures, league.key, season)
@@ -442,14 +442,14 @@ def run_league_pipeline(
 
         if not upcoming_events:
             logger.debug("[%s] No upcoming matches in DB — skipping.", league.key)
-            return []
+            return [], []
 
         if not raw_fixtures:
             logger.warning(
                 "[%s] No finished fixtures in DB — run with --force to fetch from API. Skipping.",
                 league.key,
             )
-            return []
+            return [], []
 
     # Build Leg 2 aggregate context map (UCL knockout only; no-op for all other leagues)
     leg2_map = build_leg2_map(upcoming_events, raw_fixtures, raw_stage_map, name_map, league.key)
@@ -637,7 +637,7 @@ def run_league_pipeline(
         quota if quota is not None else "—",
         skipped_note,
     )
-    return value_bets
+    return value_bets, raw_fixtures
 
 
 # ---------------------------------------------------------------------------
@@ -686,6 +686,168 @@ def save_bets_to_history(session, match_bets_list: list[dict], recorded_date: st
             ))
             inserted += 1
     return inserted
+
+
+def _get_supabase_client() -> Client:
+    """Creates a Supabase client from environment variables."""
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_ANON_KEY")
+    if not url or not key:
+        raise EnvironmentError(
+            "SUPABASE_URL and SUPABASE_ANON_KEY must be set in your .env file."
+        )
+    return create_client(url, key)
+
+
+def settle_supabase_bets(supabase: Client, all_raw_fixtures: list[dict]) -> int:
+    """
+    Settles bets directly against Supabase — works in CI where no local SQLite exists.
+
+    1. Fetches unsettled bets from Supabase whose kickoff is in the past.
+    2. Matches them against raw_fixtures (already fetched from football-data.co.uk).
+    3. Evaluates each outcome and upserts the result back to Supabase.
+    """
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        resp = (
+            supabase.table("bet_history")
+            .select("kickoff,home_team,away_team,home_canonical,away_canonical,outcome")
+            .eq("settled", False)
+            .lt("kickoff", now_iso)
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("Failed to fetch unsettled bets from Supabase: %s", exc)
+        return 0
+
+    unsettled = resp.data or []
+    if not unsettled:
+        logger.debug("No unsettled past bets found in Supabase.")
+        return 0
+
+    # Index fixtures by (home_canonical, away_canonical) for O(1) lookup
+    fixture_index: dict[tuple, dict] = {}
+    for f in all_raw_fixtures:
+        fixture_index[(f["home_team"], f["away_team"])] = f
+
+    rows_to_update = []
+    settled_at = datetime.now(timezone.utc).isoformat()
+    for bet in unsettled:
+        fixture = fixture_index.get((bet["home_canonical"], bet["away_canonical"]))
+        if fixture is None:
+            continue
+
+        # Date guard: fixture must be within ±1 day of kickoff
+        kickoff_dt = datetime.fromisoformat(bet["kickoff"].replace("Z", "+00:00"))
+        fixture_dt = fixture["fixture_date"]
+        if not isinstance(fixture_dt, datetime):
+            fixture_dt = datetime.fromisoformat(str(fixture_dt))
+        if fixture_dt.tzinfo is None:
+            fixture_dt = fixture_dt.replace(tzinfo=timezone.utc)
+        if abs((fixture_dt - kickoff_dt).total_seconds()) > 86400:
+            continue
+
+        hg, ag = fixture["home_goals"], fixture["away_goals"]
+        won = {
+            "home_win":  hg > ag,
+            "draw":      hg == ag,
+            "away_win":  ag > hg,
+            "over_2_5":  hg + ag > 2,
+            "under_2_5": hg + ag <= 2,
+            "btts_yes":  hg > 0 and ag > 0,
+            "btts_no":   hg == 0 or ag == 0,
+        }.get(bet["outcome"], False)
+
+        rows_to_update.append({
+            "kickoff":           bet["kickoff"],
+            "home_team":         bet["home_team"],
+            "away_team":         bet["away_team"],
+            "outcome":           bet["outcome"],
+            "settled":           True,
+            "result":            "won" if won else "lost",
+            "actual_home_goals": hg,
+            "actual_away_goals": ag,
+            "settled_at":        settled_at,
+        })
+
+    if not rows_to_update:
+        logger.debug("No fixture matches found for unsettled bets.")
+        return 0
+
+    try:
+        response = (
+            supabase.table("bet_history")
+            .upsert(rows_to_update, on_conflict="kickoff,home_team,away_team,outcome")
+            .execute()
+        )
+        count = len(response.data) if response.data else len(rows_to_update)
+        logger.info("Settled %d bet(s) via Supabase.", count)
+        return count
+    except Exception as exc:
+        logger.error("Failed to settle bets in Supabase: %s", exc)
+        raise
+
+
+def push_bets_to_supabase(
+    supabase: Client,
+    value_bets: list[dict],
+    recorded_date: str,
+) -> int:
+    """
+    Upserts today's value bets into the Supabase `bet_history` table.
+    Uses the unique constraint (kickoff, home_team, away_team, outcome)
+    to skip duplicates. Returns the number of rows upserted.
+    """
+    rows = []
+    for m in value_bets:
+        for b in m["bets"]:
+            rows.append({
+                "recorded_date":  recorded_date,
+                "league_key":     m["league_key"],
+                "league_name":    m["league_name"],
+                "home_team":      m["home_team"],
+                "away_team":      m["away_team"],
+                "home_canonical": m.get("home_canonical"),
+                "away_canonical": m.get("away_canonical"),
+                "kickoff":        m["kickoff"],  # ISO 8601 → Supabase parses as TIMESTAMPTZ
+                "stage":          m.get("stage"),
+                "outcome":        b["outcome"],
+                "outcome_label":  b["outcome_label"],
+                "odds":           b["odds"],
+                "true_prob":      b["true_prob"],
+                "ev":             b["ev"],
+                "home_rank":      m.get("home_rank"),
+                "away_rank":      m.get("away_rank"),
+                "home_form":      m.get("home_form"),
+                "away_form":      m.get("away_form"),
+                "home_crest":     m.get("home_crest"),
+                "away_crest":     m.get("away_crest"),
+                "home_rest_days": m.get("home_rest_days"),
+                "away_rest_days": m.get("away_rest_days"),
+                "h2h_used":       m.get("h2h_used"),
+                "btts_yes_prob":  m.get("btts_yes_prob"),
+                "is_second_leg":  m.get("is_second_leg"),
+                "agg_home":       m.get("agg_home"),
+                "agg_away":       m.get("agg_away"),
+                "leg1_result":    m.get("leg1_result"),
+            })
+
+    if not rows:
+        logger.info("No value bets to push to Supabase.")
+        return 0
+
+    try:
+        response = (
+            supabase.table("bet_history")
+            .upsert(rows, on_conflict="kickoff,home_team,away_team,outcome")
+            .execute()
+        )
+        count = len(response.data) if response.data else len(rows)
+        logger.info("Pushed %d bet row(s) to Supabase.", count)
+        return count
+    except Exception as exc:
+        logger.error("Failed to push bets to Supabase: %s", exc)
+        raise
 
 
 def settle_bets(session) -> int:
@@ -772,17 +934,14 @@ def run_pipeline(force: bool = False) -> None:
     suffix = f"  (+ {n_skipped_leagues} skipped)" if n_skipped_leagues else ""
     logger.info("Leagues: %s%s", ", ".join(lg.display_name for lg in cfg.enabled_leagues), suffix)
 
-    # Settle any past bets before running today's pipeline (results may now be available)
-    with Session(engine) as session:
-        n_settled = settle_bets(session)
-        session.commit()
-    if n_settled:
-        logger.info("Settled %d past bet(s).", n_settled)
+    supabase = _get_supabase_client()
 
     all_value_bets: list[dict] = []
+    all_raw_fixtures: list[dict] = []
     for league in cfg.enabled_leagues:
-        league_bets = run_league_pipeline(league, cfg, engine, name_map, force=force)
+        league_bets, raw_fixtures = run_league_pipeline(league, cfg, engine, name_map, force=force)
         all_value_bets.extend(league_bets)
+        all_raw_fixtures.extend(raw_fixtures)
 
     all_value_bets.sort(key=lambda x: x["kickoff"])
     total_bets = sum(len(m["bets"]) for m in all_value_bets)
@@ -791,16 +950,20 @@ def run_pipeline(force: bool = False) -> None:
         total_bets, len(all_value_bets), time.monotonic() - t0,
     )
 
-    # Persist today's recommendations and load full history for the report
+    # Settle past bets against Supabase (works in CI — no local SQLite needed)
+    settle_supabase_bets(supabase, all_raw_fixtures)
+
+    # Persist today's recommendations to local SQLite (used by settle_bets)
     with Session(engine) as session:
         n_new = save_bets_to_history(session, all_value_bets, date.today().isoformat())
         session.commit()
-        history = load_bet_history(session)
     if n_new:
-        logger.info("Saved %d new bet record(s) to history.", n_new)
+        logger.info("Saved %d new bet record(s) to local DB.", n_new)
 
-    write_report_json(all_value_bets, history, cfg.report_json_path)
-    open_report(cfg.report_html_path)
+    # Push today's value bets to Supabase
+    push_bets_to_supabase(supabase, all_value_bets, date.today().isoformat())
+
+    webbrowser.open("http://localhost:8000")
 
 
 def main() -> None:

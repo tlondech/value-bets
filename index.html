@@ -4,79 +4,166 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Daily Value Bets</title>
+  <link rel="icon" href="/favicon.ico" sizes="any" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { darkMode: 'media' }
-  </script>
+  <script>tailwind.config = { darkMode: 'media' }</script>
   <style>
-    /* EV tier colors — driven by runtime value, can't use Tailwind JIT for these */
     .ev-success { color: #4ade80; }
     .ev-warning { color: #fbbf24; font-weight: 700; }
     .ev-danger  { color: #ef4444; font-weight: 700; }
-    /* Hide scrollbars on mobile filter bar */
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    /* Column header info tooltips */
-    .col-tip { position: relative; display: inline-flex; align-items: center; gap: 3px; cursor: help; }
 
-    /* 📱 MOBILE FIRST: Fixed 'Toast' at the bottom of the screen */
-    .col-tip .tip {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translate(-50%, 10px);
-      background: #1f2937; color: #f9fafb;
-      font-size: 0.75rem; font-weight: 500; text-transform: none; letter-spacing: 0;
-      padding: 12px 16px; border-radius: 10px; white-space: normal;
-      pointer-events: none; opacity: 0; transition: all 0.2s ease-out;
-      z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-      width: calc(100vw - 32px); max-width: 320px;
-      text-align: center; line-height: 1.5;
+    .form-w { background:#4ade80; color:#14532d; }
+    .form-d { background:#fbbf24; color:#78350f; }
+    .form-l { background:#f87171; color:#7f1d1d; }
+
+    .no-scrollbar::-webkit-scrollbar { display:none; }
+    .no-scrollbar { -ms-overflow-style:none; scrollbar-width:none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display:inline-block; width:1.5rem; height:1.5rem;
+      border:3px solid rgba(156,163,175,0.3);
+      border-top-color:#6366f1; border-radius:50%;
+      animation:spin 0.7s linear infinite;
     }
 
-    /* Reveal states for Mobile Toast */
-    .col-tip.active .tip { opacity: 1; transform: translate(-50%, 0); }
-    @media (hover: hover) {
-      .col-tip:hover .tip { opacity: 1; transform: translate(-50%, 0); }
+    th.sortable { cursor:pointer; user-select:none; white-space:nowrap; }
+    th.sortable:hover { opacity:0.75; }
+    .sort-icon { display:inline-block; margin-left:4px; opacity:0.4; font-size:0.7em; }
+    th.sort-asc .sort-icon, th.sort-desc .sort-icon { opacity:1; }
+
+    /* Filter drawer */
+    #filter-drawer {
+      position:fixed; top:0; right:0; bottom:0; width:min(320px,90vw);
+      background:white; z-index:50;
+      transform:translateX(100%); transition:transform 0.25s ease;
+      display:flex; flex-direction:column;
+      box-shadow:-4px 0 24px rgba(0,0,0,0.12);
     }
-
-    /* 💻 DESKTOP OVERRIDE: Revert to classic floating tooltips */
-    @media (min-width: 768px) {
-      .col-tip .tip {
-        position: absolute;
-        bottom: calc(100% + 8px);
-        top: auto;
-        /* 1. ANCHOR LEFT BY DEFAULT (Fixes BTTS bleeding left) */
-        left: 0;
-        transform: translateY(4px);
-        width: max-content;
-        max-width: 300px; /* Safe width for desktop */
-        text-align: left;
-        padding: 8px 12px;
-        border-radius: 7px;
-      }
-
-      /* Reveal states for Desktop */
-      .col-tip.active .tip { transform: translateY(0); }
-      @media (hover: hover) {
-        .col-tip:hover .tip { transform: translateY(0); }
-      }
-
-      /* 2. ANCHOR RIGHT FOR DATA COLUMNS (Fixes EV/Odds bleeding right) */
-      .col-tip.justify-end .tip {
-        left: auto;
-        right: 0; /* Locks the right side of the tooltip to the right side of the text */
-      }
+    @media (prefers-color-scheme: dark) {
+      #filter-drawer { background:#111827; }
     }
+    #filter-drawer.open { transform:translateX(0); }
+    #filter-backdrop {
+      position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:49;
+      opacity:0; pointer-events:none; transition:opacity 0.25s ease;
+    }
+    #filter-backdrop.open { opacity:1; pointer-events:auto; }
   </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen">
 
 <script id="report-data" type="application/json">
 {
-  "generated_at": "2026-03-14T06:58:00.335109+00:00",
-  "date": "2026-03-14",
+  "generated_at": "2026-03-13T18:53:41.235459+00:00",
+  "date": "2026-03-13",
   "value_bets": [
+    {
+      "league_key": "seriea",
+      "league_name": "Serie A",
+      "home_team": "Torino",
+      "away_team": "Parma",
+      "kickoff": "2026-03-13T19:45:00+00:00",
+      "kickoff_local": "19:45",
+      "stage": "Matchday 29 / 38",
+      "home_rank": 15,
+      "away_rank": 12,
+      "home_form": [
+        "D",
+        "L",
+        "L",
+        "W",
+        "L"
+      ],
+      "away_form": [
+        "W",
+        "W",
+        "W",
+        "D",
+        "D"
+      ],
+      "home_crest": "https://crests.football-data.org/586.png",
+      "away_crest": "https://crests.football-data.org/112.png",
+      "btts_yes_prob": 0.3836,
+      "h2h_used": false,
+      "home_rest_days": 7,
+      "away_rest_days": 5,
+      "is_second_leg": false,
+      "leg1_result": null,
+      "agg_home": null,
+      "agg_away": null,
+      "home_canonical": "Torino",
+      "away_canonical": "Parma",
+      "bets": [
+        {
+          "outcome": "away_win",
+          "outcome_label": "Away Win",
+          "odds": 3.7,
+          "true_prob": 0.3466,
+          "ev": 0.2823
+        },
+        {
+          "outcome": "btts_no",
+          "outcome_label": "BTTS No",
+          "odds": 1.75,
+          "true_prob": 0.6164,
+          "ev": 0.0787
+        }
+      ]
+    },
+    {
+      "league_key": "laliga",
+      "league_name": "La Liga",
+      "home_team": "Alavés",
+      "away_team": "Villarreal",
+      "kickoff": "2026-03-13T20:00:00+00:00",
+      "kickoff_local": "20:00",
+      "stage": "Matchday 28 / 38",
+      "home_rank": 16,
+      "away_rank": 4,
+      "home_form": [
+        "L",
+        "D",
+        "D",
+        "L",
+        "L"
+      ],
+      "away_form": [
+        "L",
+        "W",
+        "W",
+        "L",
+        "W"
+      ],
+      "home_crest": "https://crests.football-data.org/263.png",
+      "away_crest": "https://crests.football-data.org/94.png",
+      "btts_yes_prob": 0.533,
+      "h2h_used": false,
+      "home_rest_days": 5,
+      "away_rest_days": 5,
+      "is_second_leg": false,
+      "leg1_result": null,
+      "agg_home": null,
+      "agg_away": null,
+      "home_canonical": "Alaves",
+      "away_canonical": "Villarreal",
+      "bets": [
+        {
+          "outcome": "away_win",
+          "outcome_label": "Away Win",
+          "odds": 2.15,
+          "true_prob": 0.5264,
+          "ev": 0.1319
+        },
+        {
+          "outcome": "over_2_5",
+          "outcome_label": "Over 2.5",
+          "odds": 2.01,
+          "true_prob": 0.5239,
+          "ev": 0.0531
+        }
+      ]
+    },
     {
       "league_key": "laliga",
       "league_name": "La Liga",
@@ -117,16 +204,16 @@
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
-          "odds": 2.6,
+          "odds": 2.65,
           "true_prob": 0.4362,
-          "ev": 0.1341
+          "ev": 0.1559
         },
         {
           "outcome": "btts_no",
           "outcome_label": "BTTS No",
-          "odds": 2.15,
+          "odds": 2.08,
           "true_prob": 0.5156,
-          "ev": 0.1085
+          "ev": 0.0724
         }
       ]
     },
@@ -216,9 +303,9 @@
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
-          "odds": 1.54,
+          "odds": 1.5,
           "true_prob": 0.7657,
-          "ev": 0.1791
+          "ev": 0.1485
         }
       ]
     },
@@ -262,16 +349,9 @@
         {
           "outcome": "btts_no",
           "outcome_label": "BTTS No",
-          "odds": 2.15,
+          "odds": 2.05,
           "true_prob": 0.518,
-          "ev": 0.1138
-        },
-        {
-          "outcome": "home_win",
-          "outcome_label": "Home Win",
-          "odds": 1.49,
-          "true_prob": 0.7331,
-          "ev": 0.0924
+          "ev": 0.062
         }
       ]
     },
@@ -315,9 +395,9 @@
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
-          "odds": 1.38,
+          "odds": 1.42,
           "true_prob": 0.8328,
-          "ev": 0.1493
+          "ev": 0.1826
         }
       ]
     },
@@ -407,9 +487,9 @@
         {
           "outcome": "btts_no",
           "outcome_label": "BTTS No",
-          "odds": 1.91,
+          "odds": 1.95,
           "true_prob": 0.6393,
-          "ev": 0.2211
+          "ev": 0.2466
         },
         {
           "outcome": "draw",
@@ -460,16 +540,16 @@
         {
           "outcome": "draw",
           "outcome_label": "Draw",
-          "odds": 3.5,
+          "odds": 3.6,
           "true_prob": 0.3168,
-          "ev": 0.1089
+          "ev": 0.1406
         },
         {
           "outcome": "btts_no",
           "outcome_label": "BTTS No",
-          "odds": 1.53,
+          "odds": 1.55,
           "true_prob": 0.7124,
-          "ev": 0.0899
+          "ev": 0.1042
         }
       ]
     },
@@ -520,9 +600,9 @@
         {
           "outcome": "draw",
           "outcome_label": "Draw",
-          "odds": 4.6,
+          "odds": 4.7,
           "true_prob": 0.2359,
-          "ev": 0.0851
+          "ev": 0.1087
         }
       ]
     },
@@ -566,9 +646,16 @@
         {
           "outcome": "draw",
           "outcome_label": "Draw",
-          "odds": 4.6,
+          "odds": 4.8,
           "true_prob": 0.2583,
-          "ev": 0.1881
+          "ev": 0.2397
+        },
+        {
+          "outcome": "under_2_5",
+          "outcome_label": "Under 2.5",
+          "odds": 1.88,
+          "true_prob": 0.573,
+          "ev": 0.0772
         }
       ]
     },
@@ -658,9 +745,9 @@
         {
           "outcome": "btts_no",
           "outcome_label": "BTTS No",
-          "odds": 1.93,
+          "odds": 1.83,
           "true_prob": 0.585,
-          "ev": 0.129
+          "ev": 0.0705
         }
       ]
     },
@@ -701,13 +788,6 @@
       "home_canonical": "Hamburg",
       "away_canonical": "FC Koln",
       "bets": [
-        {
-          "outcome": "under_2_5",
-          "outcome_label": "Under 2.5",
-          "odds": 2.01,
-          "true_prob": 0.5783,
-          "ev": 0.1624
-        },
         {
           "outcome": "btts_no",
           "outcome_label": "BTTS No",
@@ -757,16 +837,16 @@
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
-          "odds": 3.1,
+          "odds": 2.95,
           "true_prob": 0.4942,
-          "ev": 0.5319
+          "ev": 0.4578
         },
         {
           "outcome": "btts_no",
           "outcome_label": "BTTS No",
-          "odds": 1.99,
+          "odds": 2.09,
           "true_prob": 0.5552,
-          "ev": 0.1049
+          "ev": 0.1604
         }
       ]
     },
@@ -810,23 +890,23 @@
         {
           "outcome": "over_2_5",
           "outcome_label": "Over 2.5",
-          "odds": 1.89,
+          "odds": 1.99,
           "true_prob": 0.655,
-          "ev": 0.238
+          "ev": 0.3035
         },
         {
           "outcome": "btts_yes",
           "outcome_label": "BTTS Yes",
-          "odds": 1.85,
+          "odds": 1.95,
           "true_prob": 0.6105,
-          "ev": 0.1293
+          "ev": 0.1904
         },
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
-          "odds": 5.5,
+          "odds": 5.6,
           "true_prob": 0.1916,
-          "ev": 0.0536
+          "ev": 0.0727
         }
       ]
     },
@@ -877,9 +957,9 @@
         {
           "outcome": "away_win",
           "outcome_label": "Away Win",
-          "odds": 1.64,
+          "odds": 1.66,
           "true_prob": 0.6482,
-          "ev": 0.0631
+          "ev": 0.0761
         }
       ]
     },
@@ -923,16 +1003,9 @@
         {
           "outcome": "btts_no",
           "outcome_label": "BTTS No",
-          "odds": 2.2,
+          "odds": 2.12,
           "true_prob": 0.5203,
-          "ev": 0.1446
-        },
-        {
-          "outcome": "home_win",
-          "outcome_label": "Home Win",
-          "odds": 1.3,
-          "true_prob": 0.8094,
-          "ev": 0.0523
+          "ev": 0.103
         }
       ]
     },
@@ -1075,9 +1148,9 @@
         {
           "outcome": "btts_yes",
           "outcome_label": "BTTS Yes",
-          "odds": 1.9,
+          "odds": 1.93,
           "true_prob": 0.5897,
-          "ev": 0.1203
+          "ev": 0.138
         },
         {
           "outcome": "home_win",
@@ -1135,9 +1208,9 @@
         {
           "outcome": "btts_no",
           "outcome_label": "BTTS No",
-          "odds": 2.06,
+          "odds": 2.07,
           "true_prob": 0.5244,
-          "ev": 0.0802
+          "ev": 0.0855
         }
       ]
     },
@@ -1181,9 +1254,9 @@
         {
           "outcome": "draw",
           "outcome_label": "Draw",
-          "odds": 4.1,
+          "odds": 4.0,
           "true_prob": 0.2822,
-          "ev": 0.1568
+          "ev": 0.1286
         }
       ]
     },
@@ -1227,9 +1300,9 @@
         {
           "outcome": "away_win",
           "outcome_label": "Away Win",
-          "odds": 3.05,
+          "odds": 3.1,
           "true_prob": 0.3745,
-          "ev": 0.1422
+          "ev": 0.1609
         },
         {
           "outcome": "under_2_5",
@@ -1287,9 +1360,9 @@
         {
           "outcome": "over_2_5",
           "outcome_label": "Over 2.5",
-          "odds": 2.07,
+          "odds": 2.06,
           "true_prob": 0.5195,
-          "ev": 0.0754
+          "ev": 0.0702
         }
       ]
     },
@@ -1432,9 +1505,9 @@
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
-          "odds": 1.24,
+          "odds": 1.23,
           "true_prob": 0.874,
-          "ev": 0.0838
+          "ev": 0.075
         }
       ]
     },
@@ -1570,16 +1643,16 @@
         {
           "outcome": "draw",
           "outcome_label": "Draw",
-          "odds": 6.25,
+          "odds": 6.0,
           "true_prob": 0.224,
-          "ev": 0.4
+          "ev": 0.344
         },
         {
           "outcome": "away_win",
           "outcome_label": "Away Win",
-          "odds": 7.75,
+          "odds": 7.5,
           "true_prob": 0.1662,
-          "ev": 0.288
+          "ev": 0.2464
         }
       ]
     },
@@ -1715,16 +1788,9 @@
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
-          "odds": 2.35,
+          "odds": 2.3,
           "true_prob": 0.4905,
-          "ev": 0.1526
-        },
-        {
-          "outcome": "btts_no",
-          "outcome_label": "BTTS No",
-          "odds": 3.48,
-          "true_prob": 0.3037,
-          "ev": 0.057
+          "ev": 0.128
         }
       ]
     },
@@ -2040,9 +2106,9 @@
         {
           "outcome": "btts_no",
           "outcome_label": "BTTS No",
-          "odds": 1.93,
+          "odds": 1.96,
           "true_prob": 0.5928,
-          "ev": 0.1442
+          "ev": 0.162
         },
         {
           "outcome": "draw",
@@ -2224,16 +2290,16 @@
         {
           "outcome": "away_win",
           "outcome_label": "Away Win",
-          "odds": 4.79,
+          "odds": 4.76,
           "true_prob": 0.393,
-          "ev": 0.8827
+          "ev": 0.8709
         },
         {
           "outcome": "draw",
           "outcome_label": "Draw",
-          "odds": 4.55,
+          "odds": 4.52,
           "true_prob": 0.2628,
-          "ev": 0.1955
+          "ev": 0.1876
         }
       ]
     },
@@ -2270,9 +2336,9 @@
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
-          "odds": 1.31,
+          "odds": 1.32,
           "true_prob": 0.8803,
-          "ev": 0.1532
+          "ev": 0.1621
         }
       ]
     },
@@ -2504,13 +2570,6 @@
       "home_canonical": "Villarreal",
       "away_canonical": "Sociedad",
       "bets": [
-        {
-          "outcome": "btts_yes",
-          "outcome_label": "BTTS Yes",
-          "odds": 1.67,
-          "true_prob": 0.6647,
-          "ev": 0.1101
-        },
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
@@ -3092,13 +3151,6 @@
       "away_canonical": "Sassuolo",
       "bets": [
         {
-          "outcome": "btts_yes",
-          "outcome_label": "BTTS Yes",
-          "odds": 2.0,
-          "true_prob": 0.6005,
-          "ev": 0.2011
-        },
-        {
           "outcome": "away_win",
           "outcome_label": "Away Win",
           "odds": 7.0,
@@ -3529,9 +3581,9 @@
         {
           "outcome": "away_win",
           "outcome_label": "Away Win",
-          "odds": 2.8,
+          "odds": 2.85,
           "true_prob": 0.3904,
-          "ev": 0.093
+          "ev": 0.1125
         }
       ]
     },
@@ -3575,9 +3627,9 @@
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
-          "odds": 1.7,
+          "odds": 1.72,
           "true_prob": 0.6671,
-          "ev": 0.1341
+          "ev": 0.1474
         }
       ]
     },
@@ -3720,9 +3772,9 @@
         {
           "outcome": "home_win",
           "outcome_label": "Home Win",
-          "odds": 1.31,
+          "odds": 1.32,
           "true_prob": 0.8473,
-          "ev": 0.11
+          "ev": 0.1184
         }
       ]
     },
@@ -3994,7 +4046,7 @@
   ],
   "history": [
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Real Madrid",
       "away_team": "Atlético Madrid",
@@ -4010,7 +4062,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Real Madrid",
       "away_team": "Atlético Madrid",
@@ -4026,7 +4078,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Nantes",
       "away_team": "Strasbourg",
@@ -4042,7 +4094,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Nantes",
       "away_team": "Strasbourg",
@@ -4058,7 +4110,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Fiorentina",
       "away_team": "Inter Milan",
@@ -4074,7 +4126,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Fiorentina",
       "away_team": "Inter Milan",
@@ -4090,7 +4142,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Athletic Bilbao",
       "away_team": "Real Betis",
@@ -4106,7 +4158,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "AS Roma",
       "away_team": "Lecce",
@@ -4122,7 +4174,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "AS Roma",
       "away_team": "Lecce",
@@ -4138,7 +4190,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "AS Roma",
       "away_team": "Lecce",
@@ -4154,23 +4206,23 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Rennes",
       "away_team": "Metz",
       "kickoff": "2026-03-22T16:15:00",
       "stage": "Matchday 27 / 34",
       "outcome_label": "Home Win",
-      "odds": 1.31,
+      "odds": 1.32,
       "true_prob": 0.8473,
-      "ev": 0.11,
+      "ev": 0.1184,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Paris FC",
       "away_team": "Le Havre",
@@ -4186,7 +4238,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Paris FC",
       "away_team": "Le Havre",
@@ -4202,7 +4254,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Marseille",
       "away_team": "Lille",
@@ -4218,39 +4270,39 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Celta Vigo",
       "away_team": "Alavés",
       "kickoff": "2026-03-22T15:15:00",
       "stage": "Matchday 29 / 38",
       "outcome_label": "Home Win",
-      "odds": 1.7,
+      "odds": 1.72,
       "true_prob": 0.6671,
-      "ev": 0.1341,
+      "ev": 0.1474,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "FSV Mainz 05",
       "away_team": "Eintracht Frankfurt",
       "kickoff": "2026-03-22T14:30:00",
       "stage": "Matchday 27 / 34",
       "outcome_label": "Away Win",
-      "odds": 2.8,
+      "odds": 2.85,
       "true_prob": 0.3904,
-      "ev": 0.093,
+      "ev": 0.1125,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Tottenham Hotspur",
       "away_team": "Nottingham Forest",
@@ -4266,7 +4318,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Lyon",
       "away_team": "AS Monaco",
@@ -4282,7 +4334,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Atalanta BC",
       "away_team": "Hellas Verona",
@@ -4298,7 +4350,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Barcelona",
       "away_team": "Rayo Vallecano",
@@ -4314,7 +4366,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Newcastle United",
       "away_team": "Sunderland",
@@ -4330,7 +4382,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Newcastle United",
       "away_team": "Sunderland",
@@ -4346,7 +4398,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Newcastle United",
       "away_team": "Sunderland",
@@ -4362,7 +4414,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Como",
       "away_team": "Pisa",
@@ -4378,7 +4430,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Sevilla",
       "away_team": "Valencia",
@@ -4394,7 +4446,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Leeds United",
       "away_team": "Brentford",
@@ -4410,23 +4462,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
-      "league_name": "Serie A",
-      "home_team": "Juventus",
-      "away_team": "Sassuolo",
-      "kickoff": "2026-03-21T19:45:00",
-      "stage": "Matchday 30 / 38",
-      "outcome_label": "BTTS Yes",
-      "odds": 2.0,
-      "true_prob": 0.6005,
-      "ev": 0.2011,
-      "settled": false,
-      "result": null,
-      "actual_home_goals": null,
-      "actual_away_goals": null
-    },
-    {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Juventus",
       "away_team": "Sassuolo",
@@ -4442,7 +4478,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Auxerre",
       "away_team": "Brest",
@@ -4458,7 +4494,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Auxerre",
       "away_team": "Brest",
@@ -4474,7 +4510,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Levante",
       "away_team": "Oviedo",
@@ -4490,7 +4526,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Everton",
       "away_team": "Chelsea",
@@ -4506,7 +4542,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "CA Osasuna",
       "away_team": "Girona",
@@ -4522,7 +4558,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "Borussia Dortmund",
       "away_team": "Hamburger SV",
@@ -4538,7 +4574,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "AC Milan",
       "away_team": "Torino",
@@ -4554,7 +4590,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Toulouse",
       "away_team": "Lorient",
@@ -4570,7 +4606,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Fulham",
       "away_team": "Burnley",
@@ -4586,7 +4622,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Fulham",
       "away_team": "Burnley",
@@ -4602,7 +4638,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "1. FC Köln",
       "away_team": "Borussia Monchengladbach",
@@ -4618,7 +4654,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Parma",
       "away_team": "Cremonese",
@@ -4634,7 +4670,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Parma",
       "away_team": "Cremonese",
@@ -4650,7 +4686,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Brighton and Hove Albion",
       "away_team": "Liverpool",
@@ -4666,7 +4702,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Brighton and Hove Albion",
       "away_team": "Liverpool",
@@ -4682,7 +4718,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Villarreal",
       "away_team": "Real Sociedad",
@@ -4698,23 +4734,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
-      "league_name": "La Liga",
-      "home_team": "Villarreal",
-      "away_team": "Real Sociedad",
-      "kickoff": "2026-03-20T20:00:00",
-      "stage": "Matchday 29 / 38",
-      "outcome_label": "BTTS Yes",
-      "odds": 1.67,
-      "true_prob": 0.6647,
-      "ev": 0.1101,
-      "settled": false,
-      "result": null,
-      "actual_home_goals": null,
-      "actual_away_goals": null
-    },
-    {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "RC Lens",
       "away_team": "Angers",
@@ -4730,7 +4750,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Genoa",
       "away_team": "Udinese",
@@ -4746,7 +4766,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "RB Leipzig",
       "away_team": "TSG Hoffenheim",
@@ -4762,7 +4782,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Cagliari",
       "away_team": "Napoli",
@@ -4778,7 +4798,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Cagliari",
       "away_team": "Napoli",
@@ -4794,55 +4814,55 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Champions League",
       "home_team": "Bayern Munich",
       "away_team": "Atalanta BC",
       "kickoff": "2026-03-18T20:00:00",
       "stage": "Round of 16",
       "outcome_label": "Home Win",
-      "odds": 1.31,
+      "odds": 1.32,
       "true_prob": 0.8803,
-      "ev": 0.1532,
+      "ev": 0.1621,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Champions League",
       "home_team": "Barcelona",
       "away_team": "Newcastle United",
       "kickoff": "2026-03-18T17:45:00",
       "stage": "Round of 16",
       "outcome_label": "Draw",
-      "odds": 4.55,
+      "odds": 4.52,
       "true_prob": 0.2628,
-      "ev": 0.1955,
+      "ev": 0.1876,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Champions League",
       "home_team": "Barcelona",
       "away_team": "Newcastle United",
       "kickoff": "2026-03-18T17:45:00",
       "stage": "Round of 16",
       "outcome_label": "Away Win",
-      "odds": 4.79,
+      "odds": 4.76,
       "true_prob": 0.393,
-      "ev": 0.8827,
+      "ev": 0.8709,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Champions League",
       "home_team": "Manchester City",
       "away_team": "Real Madrid",
@@ -4858,7 +4878,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Champions League",
       "home_team": "Manchester City",
       "away_team": "Real Madrid",
@@ -4874,7 +4894,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Champions League",
       "home_team": "Manchester City",
       "away_team": "Real Madrid",
@@ -4890,7 +4910,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Champions League",
       "home_team": "Chelsea",
       "away_team": "Paris Saint Germain",
@@ -4906,7 +4926,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Champions League",
       "home_team": "Chelsea",
       "away_team": "Paris Saint Germain",
@@ -4922,7 +4942,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Champions League",
       "home_team": "Arsenal",
       "away_team": "Bayer Leverkusen",
@@ -4938,7 +4958,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Rayo Vallecano",
       "away_team": "Levante",
@@ -4954,7 +4974,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Rayo Vallecano",
       "away_team": "Levante",
@@ -4970,23 +4990,23 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Rayo Vallecano",
       "away_team": "Levante",
       "kickoff": "2026-03-16T20:00:00",
       "stage": "Matchday 28 / 38",
       "outcome_label": "BTTS No",
-      "odds": 1.93,
+      "odds": 1.96,
       "true_prob": 0.5928,
-      "ev": 0.1442,
+      "ev": 0.162,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Brentford",
       "away_team": "Wolverhampton Wanderers",
@@ -5002,7 +5022,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Brentford",
       "away_team": "Wolverhampton Wanderers",
@@ -5018,7 +5038,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Cremonese",
       "away_team": "Fiorentina",
@@ -5034,7 +5054,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Cremonese",
       "away_team": "Fiorentina",
@@ -5050,7 +5070,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Real Sociedad",
       "away_team": "CA Osasuna",
@@ -5066,7 +5086,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Real Sociedad",
       "away_team": "CA Osasuna",
@@ -5082,7 +5102,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Rennes",
       "away_team": "Lille",
@@ -5098,7 +5118,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Rennes",
       "away_team": "Lille",
@@ -5114,7 +5134,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Lazio",
       "away_team": "AC Milan",
@@ -5130,7 +5150,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Lazio",
       "away_team": "AC Milan",
@@ -5146,39 +5166,23 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "VfB Stuttgart",
       "away_team": "RB Leipzig",
       "kickoff": "2026-03-15T18:30:00",
       "stage": "Matchday 26 / 34",
       "outcome_label": "Home Win",
-      "odds": 2.35,
+      "odds": 2.3,
       "true_prob": 0.4905,
-      "ev": 0.1526,
+      "ev": 0.128,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
-      "league_name": "Bundesliga",
-      "home_team": "VfB Stuttgart",
-      "away_team": "RB Leipzig",
-      "kickoff": "2026-03-15T18:30:00",
-      "stage": "Matchday 26 / 34",
-      "outcome_label": "BTTS No",
-      "odds": 3.48,
-      "true_prob": 0.3037,
-      "ev": 0.057,
-      "settled": false,
-      "result": null,
-      "actual_home_goals": null,
-      "actual_away_goals": null
-    },
-    {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Como",
       "away_team": "AS Roma",
@@ -5194,7 +5198,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "SC Freiburg",
       "away_team": "Union Berlin",
@@ -5210,39 +5214,39 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Liverpool",
       "away_team": "Tottenham Hotspur",
       "kickoff": "2026-03-15T16:30:00",
       "stage": "Matchday 30 / 38",
       "outcome_label": "Draw",
-      "odds": 6.25,
+      "odds": 6.0,
       "true_prob": 0.224,
-      "ev": 0.4,
+      "ev": 0.344,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Liverpool",
       "away_team": "Tottenham Hotspur",
       "kickoff": "2026-03-15T16:30:00",
       "stage": "Matchday 30 / 38",
       "outcome_label": "Away Win",
-      "odds": 7.75,
+      "odds": 7.5,
       "true_prob": 0.1662,
-      "ev": 0.288,
+      "ev": 0.2464,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Metz",
       "away_team": "Toulouse",
@@ -5258,7 +5262,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Le Havre",
       "away_team": "Lyon",
@@ -5274,23 +5278,23 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Barcelona",
       "away_team": "Sevilla",
       "kickoff": "2026-03-15T15:15:00",
       "stage": "Matchday 28 / 38",
       "outcome_label": "Home Win",
-      "odds": 1.24,
+      "odds": 1.23,
       "true_prob": 0.874,
-      "ev": 0.0838,
+      "ev": 0.075,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Barcelona",
       "away_team": "Sevilla",
@@ -5306,7 +5310,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "Werder Bremen",
       "away_team": "FSV Mainz 05",
@@ -5322,7 +5326,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Strasbourg",
       "away_team": "Paris FC",
@@ -5338,39 +5342,39 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Strasbourg",
       "away_team": "Paris FC",
       "kickoff": "2026-03-15T14:00:00",
       "stage": "Matchday 26 / 34",
       "outcome_label": "BTTS No",
-      "odds": 2.06,
+      "odds": 2.07,
       "true_prob": 0.5244,
-      "ev": 0.0802,
+      "ev": 0.0855,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Sassuolo",
       "away_team": "Bologna",
       "kickoff": "2026-03-15T14:00:00",
       "stage": "Matchday 29 / 38",
       "outcome_label": "Over 2.5",
-      "odds": 2.07,
+      "odds": 2.06,
       "true_prob": 0.5195,
-      "ev": 0.0754,
+      "ev": 0.0702,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Pisa",
       "away_team": "Cagliari",
@@ -5386,7 +5390,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Nottingham Forest",
       "away_team": "Fulham",
@@ -5402,7 +5406,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Nottingham Forest",
       "away_team": "Fulham",
@@ -5418,39 +5422,39 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Nottingham Forest",
       "away_team": "Fulham",
       "kickoff": "2026-03-15T14:00:00",
       "stage": "Matchday 30 / 38",
       "outcome_label": "Away Win",
-      "odds": 3.05,
+      "odds": 3.1,
       "true_prob": 0.3745,
-      "ev": 0.1422,
+      "ev": 0.1609,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Manchester United",
       "away_team": "Aston Villa",
       "kickoff": "2026-03-15T14:00:00",
       "stage": "Matchday 30 / 38",
       "outcome_label": "Draw",
-      "odds": 4.1,
+      "odds": 4.0,
       "true_prob": 0.2822,
-      "ev": 0.1568,
+      "ev": 0.1286,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Mallorca",
       "away_team": "Espanyol",
@@ -5466,23 +5470,23 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Mallorca",
       "away_team": "Espanyol",
       "kickoff": "2026-03-15T13:00:00",
       "stage": "Matchday 28 / 38",
       "outcome_label": "BTTS Yes",
-      "odds": 1.9,
+      "odds": 1.93,
       "true_prob": 0.5897,
-      "ev": 0.1203,
+      "ev": 0.138,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Hellas Verona",
       "away_team": "Genoa",
@@ -5498,7 +5502,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Hellas Verona",
       "away_team": "Genoa",
@@ -5514,7 +5518,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "AS Monaco",
       "away_team": "Brest",
@@ -5530,7 +5534,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "West Ham United",
       "away_team": "Manchester City",
@@ -5546,167 +5550,135 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "West Ham United",
       "away_team": "Manchester City",
       "kickoff": "2026-03-14T20:00:00",
       "stage": "Matchday 30 / 38",
       "outcome_label": "Away Win",
-      "odds": 1.64,
+      "odds": 1.66,
       "true_prob": 0.6482,
-      "ev": 0.0631,
+      "ev": 0.0761,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
-      "league_name": "La Liga",
-      "home_team": "Real Madrid",
-      "away_team": "Elche CF",
-      "kickoff": "2026-03-14T20:00:00",
-      "stage": "Matchday 28 / 38",
-      "outcome_label": "Home Win",
-      "odds": 1.3,
-      "true_prob": 0.8094,
-      "ev": 0.0523,
-      "settled": false,
-      "result": null,
-      "actual_home_goals": null,
-      "actual_away_goals": null
-    },
-    {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Real Madrid",
       "away_team": "Elche CF",
       "kickoff": "2026-03-14T20:00:00",
       "stage": "Matchday 28 / 38",
       "outcome_label": "BTTS No",
-      "odds": 2.2,
+      "odds": 2.12,
       "true_prob": 0.5203,
-      "ev": 0.1446,
+      "ev": 0.103,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Udinese",
       "away_team": "Juventus",
       "kickoff": "2026-03-14T19:45:00",
       "stage": "Matchday 29 / 38",
       "outcome_label": "Over 2.5",
-      "odds": 1.89,
+      "odds": 1.99,
       "true_prob": 0.655,
-      "ev": 0.238,
+      "ev": 0.3035,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Udinese",
       "away_team": "Juventus",
       "kickoff": "2026-03-14T19:45:00",
       "stage": "Matchday 29 / 38",
       "outcome_label": "Home Win",
-      "odds": 5.5,
+      "odds": 5.6,
       "true_prob": 0.1916,
-      "ev": 0.0536,
+      "ev": 0.0727,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Udinese",
       "away_team": "Juventus",
       "kickoff": "2026-03-14T19:45:00",
       "stage": "Matchday 29 / 38",
       "outcome_label": "BTTS Yes",
-      "odds": 1.85,
+      "odds": 1.95,
       "true_prob": 0.6105,
-      "ev": 0.1293,
+      "ev": 0.1904,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Angers",
       "away_team": "Nice",
       "kickoff": "2026-03-14T18:00:00",
       "stage": "Matchday 26 / 34",
       "outcome_label": "Home Win",
-      "odds": 3.1,
+      "odds": 2.95,
       "true_prob": 0.4942,
-      "ev": 0.5319,
+      "ev": 0.4578,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Ligue 1",
       "home_team": "Angers",
       "away_team": "Nice",
       "kickoff": "2026-03-14T18:00:00",
       "stage": "Matchday 26 / 34",
       "outcome_label": "BTTS No",
-      "odds": 1.99,
+      "odds": 2.09,
       "true_prob": 0.5552,
-      "ev": 0.1049,
+      "ev": 0.1604,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Oviedo",
       "away_team": "Valencia",
       "kickoff": "2026-03-14T17:30:00",
       "stage": "Matchday 28 / 38",
       "outcome_label": "BTTS No",
-      "odds": 1.93,
+      "odds": 1.83,
       "true_prob": 0.585,
-      "ev": 0.129,
+      "ev": 0.0705,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
-      "league_name": "Bundesliga",
-      "home_team": "Hamburger SV",
-      "away_team": "1. FC Köln",
-      "kickoff": "2026-03-14T17:30:00",
-      "stage": "Matchday 26 / 34",
-      "outcome_label": "Under 2.5",
-      "odds": 2.01,
-      "true_prob": 0.5783,
-      "ev": 0.1624,
-      "settled": false,
-      "result": null,
-      "actual_home_goals": null,
-      "actual_away_goals": null
-    },
-    {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "Hamburger SV",
       "away_team": "1. FC Köln",
@@ -5722,7 +5694,7 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Chelsea",
       "away_team": "Newcastle United",
@@ -5738,39 +5710,55 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
+      "league_name": "Premier League",
+      "home_team": "Arsenal",
+      "away_team": "Everton",
+      "kickoff": "2026-03-14T17:30:00",
+      "stage": "Matchday 30 / 38",
+      "outcome_label": "Under 2.5",
+      "odds": 1.88,
+      "true_prob": 0.573,
+      "ev": 0.0772,
+      "settled": false,
+      "result": null,
+      "actual_home_goals": null,
+      "actual_away_goals": null
+    },
+    {
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Arsenal",
       "away_team": "Everton",
       "kickoff": "2026-03-14T17:30:00",
       "stage": "Matchday 30 / 38",
       "outcome_label": "Draw",
-      "odds": 4.6,
+      "odds": 4.8,
       "true_prob": 0.2583,
-      "ev": 0.1881,
+      "ev": 0.2397,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Napoli",
       "away_team": "Lecce",
       "kickoff": "2026-03-14T17:00:00",
       "stage": "Matchday 29 / 38",
       "outcome_label": "Draw",
-      "odds": 4.6,
+      "odds": 4.7,
       "true_prob": 0.2359,
-      "ev": 0.0851,
+      "ev": 0.1087,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Napoli",
       "away_team": "Lecce",
@@ -5786,39 +5774,39 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Atlético Madrid",
       "away_team": "Getafe",
       "kickoff": "2026-03-14T15:15:00",
       "stage": "Matchday 28 / 38",
       "outcome_label": "Draw",
-      "odds": 3.5,
+      "odds": 3.6,
       "true_prob": 0.3168,
-      "ev": 0.1089,
+      "ev": 0.1406,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Atlético Madrid",
       "away_team": "Getafe",
       "kickoff": "2026-03-14T15:15:00",
       "stage": "Matchday 28 / 38",
       "outcome_label": "BTTS No",
-      "odds": 1.53,
+      "odds": 1.55,
       "true_prob": 0.7124,
-      "ev": 0.0899,
+      "ev": 0.1042,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Sunderland",
       "away_team": "Brighton and Hove Albion",
@@ -5834,23 +5822,23 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Sunderland",
       "away_team": "Brighton and Hove Albion",
       "kickoff": "2026-03-14T15:00:00",
       "stage": "Matchday 30 / 38",
       "outcome_label": "BTTS No",
-      "odds": 1.91,
+      "odds": 1.95,
       "true_prob": 0.6393,
-      "ev": 0.2211,
+      "ev": 0.2466,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Premier League",
       "home_team": "Burnley",
       "away_team": "Bournemouth",
@@ -5866,71 +5854,55 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "TSG Hoffenheim",
       "away_team": "VfL Wolfsburg",
       "kickoff": "2026-03-14T14:30:00",
       "stage": "Matchday 26 / 34",
       "outcome_label": "Home Win",
-      "odds": 1.38,
+      "odds": 1.42,
       "true_prob": 0.8328,
-      "ev": 0.1493,
+      "ev": 0.1826,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "Eintracht Frankfurt",
       "away_team": "1. FC Heidenheim",
       "kickoff": "2026-03-14T14:30:00",
       "stage": "Matchday 26 / 34",
       "outcome_label": "Home Win",
-      "odds": 1.54,
+      "odds": 1.5,
       "true_prob": 0.7657,
-      "ev": 0.1791,
+      "ev": 0.1485,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
-      "league_name": "Bundesliga",
-      "home_team": "Borussia Dortmund",
-      "away_team": "Augsburg",
-      "kickoff": "2026-03-14T14:30:00",
-      "stage": "Matchday 26 / 34",
-      "outcome_label": "Home Win",
-      "odds": 1.49,
-      "true_prob": 0.7331,
-      "ev": 0.0924,
-      "settled": false,
-      "result": null,
-      "actual_home_goals": null,
-      "actual_away_goals": null
-    },
-    {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Bundesliga",
       "home_team": "Borussia Dortmund",
       "away_team": "Augsburg",
       "kickoff": "2026-03-14T14:30:00",
       "stage": "Matchday 26 / 34",
       "outcome_label": "BTTS No",
-      "odds": 2.15,
+      "odds": 2.05,
       "true_prob": 0.518,
-      "ev": 0.1138,
+      "ev": 0.062,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "Serie A",
       "home_team": "Inter Milan",
       "away_team": "Atalanta BC",
@@ -5946,32 +5918,96 @@
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Girona",
       "away_team": "Athletic Bilbao",
       "kickoff": "2026-03-14T13:00:00",
       "stage": "Matchday 28 / 38",
       "outcome_label": "Home Win",
-      "odds": 2.6,
+      "odds": 2.65,
       "true_prob": 0.4362,
-      "ev": 0.1341,
+      "ev": 0.1559,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
       "actual_away_goals": null
     },
     {
-      "recorded_date": "2026-03-14",
+      "recorded_date": "2026-03-13",
       "league_name": "La Liga",
       "home_team": "Girona",
       "away_team": "Athletic Bilbao",
       "kickoff": "2026-03-14T13:00:00",
       "stage": "Matchday 28 / 38",
       "outcome_label": "BTTS No",
-      "odds": 2.15,
+      "odds": 2.08,
       "true_prob": 0.5156,
-      "ev": 0.1085,
+      "ev": 0.0724,
+      "settled": false,
+      "result": null,
+      "actual_home_goals": null,
+      "actual_away_goals": null
+    },
+    {
+      "recorded_date": "2026-03-13",
+      "league_name": "La Liga",
+      "home_team": "Alavés",
+      "away_team": "Villarreal",
+      "kickoff": "2026-03-13T20:00:00",
+      "stage": "Matchday 28 / 38",
+      "outcome_label": "Over 2.5",
+      "odds": 2.01,
+      "true_prob": 0.5239,
+      "ev": 0.0531,
+      "settled": false,
+      "result": null,
+      "actual_home_goals": null,
+      "actual_away_goals": null
+    },
+    {
+      "recorded_date": "2026-03-13",
+      "league_name": "La Liga",
+      "home_team": "Alavés",
+      "away_team": "Villarreal",
+      "kickoff": "2026-03-13T20:00:00",
+      "stage": "Matchday 28 / 38",
+      "outcome_label": "Away Win",
+      "odds": 2.15,
+      "true_prob": 0.5264,
+      "ev": 0.1319,
+      "settled": false,
+      "result": null,
+      "actual_home_goals": null,
+      "actual_away_goals": null
+    },
+    {
+      "recorded_date": "2026-03-13",
+      "league_name": "Serie A",
+      "home_team": "Torino",
+      "away_team": "Parma",
+      "kickoff": "2026-03-13T19:45:00",
+      "stage": "Matchday 29 / 38",
+      "outcome_label": "BTTS No",
+      "odds": 1.75,
+      "true_prob": 0.6164,
+      "ev": 0.0787,
+      "settled": false,
+      "result": null,
+      "actual_home_goals": null,
+      "actual_away_goals": null
+    },
+    {
+      "recorded_date": "2026-03-13",
+      "league_name": "Serie A",
+      "home_team": "Torino",
+      "away_team": "Parma",
+      "kickoff": "2026-03-13T19:45:00",
+      "stage": "Matchday 29 / 38",
+      "outcome_label": "Away Win",
+      "odds": 3.7,
+      "true_prob": 0.3466,
+      "ev": 0.2823,
       "settled": false,
       "result": null,
       "actual_home_goals": null,
@@ -6009,1110 +6045,842 @@
   <div id="filter-wrapper" class="sticky top-14 z-10 -mx-4 px-4 backdrop-blur-sm bg-gray-100/80 dark:bg-gray-950/80 border-b border-gray-200 dark:border-gray-800">
     <div id="filter-bar" class="flex flex-wrap items-center gap-3 py-3"></div>
   </div>
+</header>
 
-  <!-- Cards feed -->
-  <div class="md:hidden mt-4 mb-1 text-center">
-    <p id="mobile-generated-at" class="text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider"></p>
-  </div>
-
-  <main id="container" class="flex flex-col gap-3 md:mt-3"></main>
-
-  <footer id="footer" class="hidden"></footer>
-
-</div>
-
-<!-- Legend Modal -->
-<div id="legend-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-  onclick="if(event.target===this)this.classList.add('hidden')">
-  <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-base font-bold text-gray-900 dark:text-white">Bet Types</h2>
-      <button onclick="document.getElementById('legend-modal').classList.add('hidden')"
-        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">&times;</button>
+<!-- ── Action bar ───────────────────────────────────────────── -->
+<div class="bg-white dark:bg-[#0f172a] border-b border-gray-200 dark:border-gray-800 py-3">
+  <div class="max-w-6xl mx-auto px-4 flex flex-col gap-3">
+    <div class="flex items-center gap-2 w-full md:w-1/2">
+      <input id="team-search" type="text" placeholder="Search team…"
+        class="flex-1 min-w-0 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+      <button id="filters-toggle"
+        class="relative shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M7 8h10M11 12h2M9 16h6"/>
+        </svg>
+        Filters
+        <span id="filter-badge" class="hidden absolute -top-1.5 -right-1.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold h-4 w-4 rounded-full leading-none"></span>
+      </button>
+      <button id="clear-filters-btn" disabled title="Clear all filters"
+        class="inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:border-gray-700 disabled:text-gray-400 border-blue-500 text-blue-500 hover:enabled:border-red-500 hover:enabled:text-red-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+        Clear
+      </button>
     </div>
-    <dl class="space-y-3 text-sm">
-      <div>
-        <dt class="font-semibold text-gray-800 dark:text-gray-100">Home Win / Draw / Away Win</dt>
-        <dd class="text-gray-500 dark:text-gray-400 mt-0.5">1X2 market — back a specific full-time result.</dd>
-      </div>
-      <div>
-        <dt class="font-semibold text-gray-800 dark:text-gray-100">Over 2.5 / Under 2.5</dt>
-        <dd class="text-gray-500 dark:text-gray-400 mt-0.5">Total goals market — over means 3+ goals, under means 2 or fewer.</dd>
-      </div>
-      <div>
-        <dt class="font-semibold text-gray-800 dark:text-gray-100">BTTS Yes</dt>
-        <dd class="text-gray-500 dark:text-gray-400 mt-0.5">Both Teams To Score — both sides net at least one goal.</dd>
-      </div>
-      <div>
-        <dt class="font-semibold text-gray-800 dark:text-gray-100">BTTS No</dt>
-        <dd class="text-gray-500 dark:text-gray-400 mt-0.5">Both Teams To Score No — at least one team keeps a clean sheet.</dd>
-      </div>
-    </dl>
+    <div id="active-filter-chips" class="flex flex-wrap items-center gap-2 empty:hidden"></div>
   </div>
 </div>
 
-<!-- Advanced Filters Backdrop -->
-<div id="filters-backdrop"
-  class="hidden fixed inset-0 bg-black/50 z-40 transition-opacity"></div>
+</div><!-- end sticky shell -->
 
-<!-- Advanced Filters Drawer -->
-<aside id="filters-drawer"
-  class="fixed inset-y-0 right-0 z-50 h-full overflow-y-auto w-[85vw] max-w-sm bg-white dark:bg-gray-900 shadow-2xl translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+<!-- ── Last updated (mobile only, scrolls with page) ────────── -->
+<div class="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-1.5">
+  <span id="last-updated-mobile" class="text-xs text-gray-500 dark:text-gray-400"></span>
+</div>
 
-  <!-- Header -->
-  <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
-    <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Advanced Filters</h2>
-    <button id="close-filters-btn"
-      class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-      </svg>
-    </button>
+<!-- ── Main ─────────────────────────────────────────────────── -->
+<main class="max-w-6xl mx-auto px-4 py-5">
+
+  <!-- Error banner -->
+  <div id="error-banner" class="hidden mb-4 px-4 py-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg text-red-700 dark:text-red-300 text-sm"></div>
+
+  <!-- ── VALUE BETS panel ──────────────────────────────────── -->
+  <div id="panel-bets">
+    <!-- Cards -->
+    <div id="cards-container"></div>
   </div>
 
-  <!-- Form Body (scrollable) -->
-  <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+  <!-- ── HISTORY panel ─────────────────────────────────────── -->
+  <div id="panel-history" class="hidden">
 
-    <!-- League -->
-    <div>
-      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">League</label>
-      <div id="league-bar" class="flex flex-wrap gap-2"></div>
-    </div>
-
-    <!-- Bet Type -->
-    <div>
-      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Bet Type</label>
-      <div id="bet-type-pills" class="flex flex-wrap gap-2"></div>
-    </div>
-
-    <!-- Expected Value (EV) -->
-    <div>
-      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Expected Value (EV)</label>
-      <div class="grid grid-cols-2 gap-3 w-full">
-        <div class="min-w-0">
-          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Min %</label>
-          <input id="filter-ev-min" type="number" placeholder="0" min="-100" max="100" step="0.1"
-            class="w-full min-w-0 px-3 py-1 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="min-w-0">
-          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Max %</label>
-          <input id="filter-ev-max" type="number" placeholder="100" min="-100" max="100" step="0.1"
-            class="w-full min-w-0 px-3 py-1 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
+    <!-- Stats grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+      <div id="stat-total"   class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Bets</p>
+        <p class="text-xl font-bold">—</p>
+      </div>
+      <div id="stat-record"  class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Record</p>
+        <p class="text-xl font-bold">—</p>
+      </div>
+      <div id="stat-winrate" class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Win Rate</p>
+        <p class="text-xl font-bold">—</p>
+      </div>
+      <div id="stat-avgev"   class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg EV</p>
+        <p class="text-xl font-bold">—</p>
+      </div>
+      <div id="stat-pnl"     class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 sm:col-span-1 col-span-2">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">P&amp;L · ROI</p>
+        <p class="text-xl font-bold">—</p>
       </div>
     </div>
 
-    <!-- Odds Range -->
-    <div>
-      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Odds Range</label>
-      <div class="grid grid-cols-2 gap-3 w-full">
-        <div class="min-w-0">
-          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Min Odds</label>
-          <input id="filter-odds-min" type="number" placeholder="1.00" min="1" step="0.01"
-            class="w-full min-w-0 px-3 py-1 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="min-w-0">
-          <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Max Odds</label>
-          <input id="filter-odds-max" type="number" placeholder="10.00" min="1" step="0.01"
-            class="w-full min-w-0 px-3 py-1 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-      </div>
+    <!-- Quick status tabs -->
+    <div id="hist-status-tabs" class="flex flex-wrap gap-2 mb-4">
+      <button class="hist-status-btn" data-status="settled">Settled</button>
+      <button class="hist-status-btn" data-status="won">Won</button>
+      <button class="hist-status-btn" data-status="lost">Lost</button>
     </div>
 
-    <!-- Model Probability -->
-    <div>
-      <div class="flex items-center justify-between mb-2">
-        <label for="filter-prob-min" class="text-sm font-semibold text-gray-700 dark:text-gray-300">Model Probability</label>
-        <span id="filter-prob-min-value" class="text-sm font-semibold text-blue-600 dark:text-blue-400 tabular-nums">0%</span>
-      </div>
-      <input id="filter-prob-min" type="range" min="0" max="100" value="0" step="1"
-        class="w-full h-2 rounded-full appearance-none cursor-pointer bg-gray-200 dark:bg-gray-700 accent-blue-600">
-      <div class="flex justify-between text-xs text-gray-400 dark:text-gray-600 mt-1">
-        <span>0%</span><span>50%</span><span>100%</span>
-      </div>
+    <!-- Cards (mobile only) -->
+    <div id="hist-cards-container" class="md:hidden"></div>
+
+    <!-- Table (desktop only) -->
+    <div class="hidden md:block overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+      <table class="w-full text-sm">
+        <thead id="hist-thead" class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/60"></thead>
+        <tbody id="hist-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Help / Legend modal ───────────────────────────────────── -->
+<div id="legend-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden">
+  <div class="bg-gray-900 border border-gray-800 rounded-xl w-[90vw] max-w-md max-h-[85vh] flex flex-col">
+
+    <!-- Modal header -->
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+      <h2 class="text-base font-semibold text-gray-100">How to read this</h2>
+      <button id="close-legend-btn" class="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400 text-lg leading-none">&times;</button>
     </div>
 
-    <!-- Exclude High-Risk Toggle -->
-    <div class="flex items-center justify-between">
+    <!-- Modal body -->
+    <div class="overflow-y-auto px-5 py-5 space-y-6 text-sm text-gray-400">
+
       <div>
-        <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Exclude High-Risk</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Hide EV &gt; 20% (Safe Mode)</p>
-      </div>
-      <label class="relative inline-flex items-center cursor-pointer">
-        <input id="filter-safe-mode" type="checkbox" class="sr-only peer">
-        <div class="w-10 h-6 rounded-full bg-gray-200 dark:bg-gray-700
-          peer-checked:bg-blue-600
-          peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-2 dark:peer-focus:ring-offset-gray-900
-          after:content-[''] after:absolute after:top-0.5 after:left-0.5
-          after:bg-white after:rounded-full after:h-5 after:w-5
-          after:transition-all peer-checked:after:translate-x-4 transition-colors">
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Bet Types</p>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span class="text-gray-300">Home Win / Draw / Away Win</span>
+            <span class="text-gray-500">1X2 market</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-300">Over 2.5 / Under 2.5</span>
+            <span class="text-gray-500">Total goals</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-300">BTTS Yes / BTTS No</span>
+            <span class="text-gray-500">Both teams score</span>
+          </div>
         </div>
-      </label>
+      </div>
+
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Card Indicators</p>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3">
+            <span class="text-amber-500 font-medium shrink-0 mt-0.5">⏱ 3d</span>
+            <span>Short rest — team's last match was fewer than 4 days ago. May affect performance.</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="bg-sky-900/40 text-sky-300 px-1.5 py-0.5 rounded text-xs shrink-0 mt-0.5">H2H</span>
+            <span>Head-to-head history was used to adjust the probability estimate.</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="flex gap-1 shrink-0 mt-0.5">
+              <span class="form-w inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold">W</span>
+              <span class="form-d inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold">D</span>
+              <span class="form-l inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold">L</span>
+            </span>
+            <span>Recent form — last 5 matches, most recent on the right.</span>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="ev-warning shrink-0 mt-0.5">+XX% ⚠</span>
+            <span>High EV (&ge;20%) — unusually wide edge, double-check the line before betting.</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Columns</p>
+        <div class="space-y-2">
+          <div class="flex justify-between">
+            <span class="text-gray-300">Odds</span>
+            <span class="text-gray-500">Bookmaker decimal odds</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-300">Prob%</span>
+            <span class="text-gray-500">Model's true probability</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-300">EV%</span>
+            <span class="text-gray-500">Edge over the bookmaker</span>
+          </div>
+        </div>
+      </div>
+
     </div>
-
   </div>
+</div>
 
-
-</aside>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
+// ── Config ────────────────────────────────────────────────────
+const SUPABASE_URL = "https://uteiydpfxybtjzmdvsgc.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZWl5ZHBmeHlidGp6bWR2c2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY1ODYsImV4cCI6MjA4ODk5MjU4Nn0.bAIiJpwEjNdZojaVBd6-hnQA_lH9CgO65kKbihyGsGw";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+// ── State ─────────────────────────────────────────────────────
+let mainTab       = "bets";
+let betsData      = [];
+let histData      = [];
+let activeLeague  = "all";
+let activeBetType = "all";
+let teamSearch    = "";
+let histSortCol      = "kickoff";
+let histSortDir      = "asc";
+let histStatusFilter = "settled";
+
+// ── Helpers ───────────────────────────────────────────────────
+function esc(s) {
+  return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+}
+function fmtTime(iso) {
+  return new Date(iso).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+}
+function relativeDate(date) {
+  const d     = new Date(date);
+  const now   = new Date();
+  const time  = d.toLocaleTimeString("en-GB",{hour:"numeric",minute:"2-digit",hour12:true});
+  const startOfToday     = new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const startOfYesterday = new Date(startOfToday - 864e5);
+  const startOfWeek      = new Date(startOfToday - 6*864e5);
+  if (d >= startOfToday)     return `Today at ${time}`;
+  if (d >= startOfYesterday) return `Yesterday at ${time}`;
+  if (d >= startOfWeek)      return `${d.toLocaleDateString("en-GB",{weekday:"long"})} at ${time}`;
+  return `${d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})} at ${time}`;
+}
+function ordinal(n) {
+  if (!n) return "";
+  const s=["th","st","nd","rd"], v=n%100;
+  return n+(s[(v-20)%10]||s[v]||s[0]);
+}
+function evClass(ev) {
+  if (ev >= 0.20) return "ev-danger";
+  if (ev >= 0.10) return "ev-warning";
+  return "ev-success";
+}
+function evLabel(ev) {
+  const warn = ev >= 0.20 ? " ⚠" : "";
+  return `<span class="${evClass(ev)}">+${(ev*100).toFixed(1)}%${warn}</span>`;
+}
+
+const LEAGUE_COLORS = {
+  epl:        "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+  laliga:     "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
+  bundesliga: "bg-red-100    text-red-800    dark:bg-red-900/40    dark:text-red-300",
+  seriea:     "bg-blue-100   text-blue-800   dark:bg-blue-900/40   dark:text-blue-300",
+  ligue1:     "bg-green-100  text-green-800  dark:bg-green-900/40  dark:text-green-300",
+  ucl:        "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300",
+};
+function leagueBadge(key, name) {
+  const cls = LEAGUE_COLORS[key] || "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+  return `<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold ${cls}">${esc(name)}</span>`;
+}
+
+function formBubbles(form) {
+  if (!Array.isArray(form) || form.length === 0) return "";
+  return form.map(r => {
+    const cls = r==="W"?"bg-green-500":r==="D"?"bg-gray-400 dark:bg-gray-500":"bg-red-500";
+    return `<span class="${cls} inline-block w-2.5 h-2.5 rounded-full" title="${r}"></span>`;
+  }).join("");
+}
+
+function resultBadge(result) {
+  if (result==="won")  return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">Won</span>`;
+  if (result==="lost") return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">Lost</span>`;
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">Pending</span>`;
+}
+
+// ── Group flat rows into matches ───────────────────────────────
+function groupIntoMatches(rows) {
+  const map = new Map();
+  for (const row of rows) {
+    const key = `${row.kickoff}|${row.home_team}|${row.away_team}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        kickoff:        row.kickoff,
+        league_key:     row.league_key,
+        league_name:    row.league_name,
+        home_team:      row.home_team,
+        away_team:      row.away_team,
+        stage:          row.stage,
+        home_rank:      row.home_rank,
+        away_rank:      row.away_rank,
+        home_form:      row.home_form,
+        away_form:      row.away_form,
+        home_crest:     row.home_crest,
+        away_crest:     row.away_crest,
+        home_rest_days: row.home_rest_days,
+        away_rest_days: row.away_rest_days,
+        h2h_used:       row.h2h_used,
+        btts_yes_prob:  row.btts_yes_prob,
+        is_second_leg:  row.is_second_leg,
+        agg_home:       row.agg_home,
+        agg_away:       row.agg_away,
+        leg1_result:    row.leg1_result,
+        bets: [],
+      });
+    }
+    map.get(key).bets.push({
+      outcome:       row.outcome,
+      outcome_label: row.outcome_label,
+      odds:          row.odds,
+      true_prob:     row.true_prob,
+      ev:            row.ev,
+    });
+  }
+  return Array.from(map.values());
+}
+
+// ── Group history rows into match objects (carries result per bet + score) ──
+function groupHistoryIntoMatches(rows) {
+  const map = new Map();
+  for (const row of rows) {
+    const key = `${row.kickoff}|${row.home_team}|${row.away_team}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        kickoff:           row.kickoff,
+        league_key:        row.league_key,
+        league_name:       row.league_name,
+        home_team:         row.home_team,
+        away_team:         row.away_team,
+        stage:             row.stage,
+        home_rank:         row.home_rank,
+        away_rank:         row.away_rank,
+        home_form:         row.home_form,
+        away_form:         row.away_form,
+        home_crest:        row.home_crest,
+        away_crest:        row.away_crest,
+        home_rest_days:    row.home_rest_days,
+        away_rest_days:    row.away_rest_days,
+        h2h_used:          row.h2h_used,
+        is_second_leg:     row.is_second_leg,
+        agg_home:          row.agg_home,
+        agg_away:          row.agg_away,
+        actual_home_goals: row.actual_home_goals,
+        actual_away_goals: row.actual_away_goals,
+        bets: [],
+      });
+    }
+    map.get(key).bets.push({
+      outcome:       row.outcome,
+      outcome_label: row.outcome_label,
+      odds:          row.odds,
+      true_prob:     row.true_prob,
+      ev:            row.ev,
+      result:        row.result,
+    });
+  }
+  return Array.from(map.values());
+}
+
+// ── Render a single match card ─────────────────────────────────
+function renderCard(m, opts = {}) {
+  const time = fmtTime(m.kickoff);
+  const crestH = (url, name) => url
+    ? `<img src="${esc(url)}" alt="${esc(name)}" class="w-7 h-7 object-contain flex-shrink-0" onerror="this.style.display='none'">`
+    : `<span class="w-7 h-7 flex-shrink-0"></span>`;
+  const rankStr = n => n ? `<span class="hidden sm:inline-block text-xs text-gray-400 ml-1">${ordinal(n)}</span>` : "";
+  const restWarn = days => (days != null && days < 4)
+    ? `<span class="whitespace-nowrap shrink-0 inline-flex items-center gap-0.5 text-xs font-medium text-amber-500" title="Short rest: only ${days} day${days===1?'':'s'} since last match">⏱ ${days}d</span>` : "";
+
+  const showResult = !!opts.showResult;
+  const score = showResult && m.actual_home_goals != null
+    ? `<span class="text-sm font-bold tabular-nums">${m.actual_home_goals}–${m.actual_away_goals}</span>`
+    : "";
+
+  const betsRows = m.bets.map(b => `
+    <tr class="border-t border-gray-100 dark:border-gray-700/50">
+      <td class="py-1.5 pr-3">
+        <span class="inline-block px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium">${esc(b.outcome_label)}</span>
+      </td>
+      <td class="py-1.5 pr-3 text-right font-mono text-sm">${Number(b.odds).toFixed(2)}</td>
+      <td class="py-1.5 pr-3 text-right text-sm text-gray-500 dark:text-gray-400">${(b.true_prob*100).toFixed(1)}%</td>
+      <td class="py-1.5 ${showResult ? "pr-3" : ""} text-right text-sm font-semibold">${evLabel(b.ev)}</td>
+      ${showResult ? `<td class="py-1.5 text-right">${resultBadge(b.result)}</td>` : ""}
+    </tr>`).join("");
+
+  return `
+  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+    <!-- Card header -->
+    <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
+      <div class="flex items-center gap-2">
+        ${leagueBadge(m.league_key, m.league_name)}
+        ${m.is_second_leg ? `<span class="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 rounded font-semibold">2nd Leg</span>` : ""}
+        ${m.is_second_leg && m.agg_home != null ? `<span class="text-xs text-gray-400" title="Aggregate going into this leg">Agg ${m.agg_home}–${m.agg_away}</span>` : ""}
+        ${m.h2h_used ? `<span class="text-xs bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-1.5 rounded">H2H</span>` : ""}
+      </div>
+      <div class="flex items-center gap-2">
+        ${score}
+        <span class="text-sm font-semibold tabular-nums text-gray-500 dark:text-gray-400">${esc(time)}</span>
+      </div>
+    </div>
+    <!-- Teams -->
+    <div class="px-4 py-3 space-y-2">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5 min-w-0">
+          ${crestH(m.home_crest, m.home_team)}
+          <span class="font-semibold truncate">${esc(m.home_team)}</span>
+          ${rankStr(m.home_rank)}
+          ${restWarn(m.home_rest_days)}
+        </div>
+        <div class="flex flex-wrap justify-end gap-1 flex-shrink-0">${formBubbles(m.home_form)}</div>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5 min-w-0">
+          ${crestH(m.away_crest, m.away_team)}
+          <span class="font-semibold truncate">${esc(m.away_team)}</span>
+          ${rankStr(m.away_rank)}
+          ${restWarn(m.away_rest_days)}
+        </div>
+        <div class="flex flex-wrap justify-end gap-1 flex-shrink-0">${formBubbles(m.away_form)}</div>
+      </div>
+    </div>
+    <!-- Bets table -->
+    <div class="px-4 pb-3 mt-2 border-t border-gray-100 dark:border-gray-800 pt-3">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-gray-400 uppercase">
+            <th class="pb-1 text-left font-medium">Bet</th>
+            <th class="pb-1 text-right font-medium">Odds</th>
+            <th class="pb-1 text-right font-medium">Prob</th>
+            <th class="pb-1 text-right font-medium">EV</th>
+            ${showResult ? `<th class="pb-1 text-right font-medium">Result</th>` : ""}
+          </tr>
+        </thead>
+        <tbody>${betsRows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+// ── Render league pills ────────────────────────────────────────
+function renderLeaguePills(matches) {
+  const counts = {};
+  for (const m of matches) counts[m.league_key] = (counts[m.league_key]||{name:m.league_name,n:0});
+  for (const m of matches) counts[m.league_key].n++;
+
+  const active = "bg-indigo-600 text-white";
+  const inactive = "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400";
+
+  let html = `<button class="league-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${activeLeague==="all"?active:inactive}" data-league="all">
+    All <span class="ml-1 opacity-70">(${matches.length})</span>
+  </button>`;
+  for (const [key, {name, n}] of Object.entries(counts)) {
+    html += `<button class="league-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${activeLeague===key?active:inactive}" data-league="${esc(key)}">
+      ${esc(name)} <span class="ml-1 opacity-70">(${n})</span>
+    </button>`;
+  }
+  document.getElementById("league-pills").innerHTML = html;
+  document.querySelectorAll(".league-pill").forEach(btn => {
+    btn.addEventListener("click", () => { activeLeague = btn.dataset.league; updateFilterBadge(); renderBetsPanel(); renderHistory(); });
+  });
+}
+
+// ── Render bet-type pills ──────────────────────────────────────
+const BET_TYPES = [
+  {key:"all",     label:"All Types"},
+  {key:"home_win",label:"Home Win"},
+  {key:"draw",    label:"Draw"},
+  {key:"away_win",label:"Away Win"},
+  {key:"over_2_5",label:"Over 2.5"},
+  {key:"under_2_5",label:"Under 2.5"},
+  {key:"btts_yes",label:"BTTS Yes"},
+  {key:"btts_no", label:"BTTS No"},
+];
+function renderBetTypePills() {
+  const active  = "bg-indigo-600 text-white";
+  const inactive = "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400";
+  document.getElementById("bet-type-pills").innerHTML = BET_TYPES.map(t =>
+    `<button class="bet-type-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${activeBetType===t.key?active:inactive}" data-type="${t.key}">${t.label}</button>`
+  ).join("");
+  document.querySelectorAll(".bet-type-pill").forEach(btn => {
+    btn.addEventListener("click", () => { activeBetType = btn.dataset.type; updateFilterBadge(); renderBetsPanel(); renderHistory(); });
+  });
+}
+
+// ── Filter + render cards ──────────────────────────────────────
+function renderBetsPanel() {
+  const allMatches = groupIntoMatches(betsData);
+  renderLeaguePills(allMatches);
+  renderBetTypePills();
+
+  let filtered = allMatches;
+
+  if (activeLeague !== "all")
+    filtered = filtered.filter(m => m.league_key === activeLeague);
+
+  if (activeBetType !== "all")
+    filtered = filtered.filter(m => m.bets.some(b => b.outcome === activeBetType));
+
+  if (teamSearch) {
+    const q = teamSearch.toLowerCase();
+    filtered = filtered.filter(m =>
+      m.home_team.toLowerCase().includes(q) || m.away_team.toLowerCase().includes(q)
+    );
   }
 
-  function formatDate(isoString) {
-    const d = new Date(isoString);
-    return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  // Filter bets within each match if bet type is active
+  if (activeBetType !== "all") {
+    filtered = filtered.map(m => ({...m, bets: m.bets.filter(b => b.outcome === activeBetType)}));
   }
 
-  function formatKickoff(isoString) {
-    if (!isoString) return "—";
-    const d = new Date(isoString);
-    return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const container = document.getElementById("cards-container");
+  if (filtered.length === 0) {
+    container.innerHTML = `<p class="text-center text-gray-400 py-12">No bets match the current filters.</p>`;
+    return;
   }
 
-  const LEAGUE_COLORS = {
-    ucl:        "bg-indigo-700 dark:bg-indigo-800",          // Champions League — deep indigo
-    epl:        "bg-purple-700 dark:bg-purple-800",           // Premier League — purple
-    laliga:     "bg-orange-600 dark:bg-orange-700",           // La Liga — orange/red
-    seriea:     "bg-sky-600 dark:bg-sky-700",                 // Serie A — sky blue
-    bundesliga: "bg-red-600 dark:bg-red-700",                 // Bundesliga — red
-    ligue1:     "bg-emerald-600 dark:bg-emerald-700",         // Ligue 1 — green
+  // Group by date
+  const byDate = new Map();
+  for (const m of filtered) {
+    const d = fmtDate(m.kickoff);
+    if (!byDate.has(d)) byDate.set(d, []);
+    byDate.get(d).push(m);
+  }
+
+  let html = "";
+  for (const [dateLabel, matches] of byDate) {
+    html += `<h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mt-6 mb-3 first:mt-0">${dateLabel}</h2>`;
+    html += `<div class="grid gap-4 sm:grid-cols-2">`;
+    html += matches.map(renderCard).join("");
+    html += `</div>`;
+  }
+  container.innerHTML = html;
+}
+
+// ── History stats ─────────────────────────────────────────────
+function stakeFor(odds) {
+  if (odds < 2)  return 20;
+  if (odds < 3)  return 10;
+  return 5;
+}
+
+function updateStatsGrid(filteredData) {
+  const wins   = filteredData.filter(r => r.result === "won");
+  const losses = filteredData.filter(r => r.result === "lost");
+  const settled = wins.length + losses.length;
+
+  // Win rate — only counts settled rows
+  const winRate = settled ? (wins.length / settled * 100).toFixed(1) + "%" : "—";
+
+  // Avg EV — across all rows in the filtered set
+  const avgEv = filteredData.length
+    ? "+" + (filteredData.reduce((s, r) => s + r.ev, 0) / filteredData.length * 100).toFixed(1) + "%"
+    : "—";
+
+  // P&L and ROI — tiered stake, settled rows only
+  const pnl    = wins.reduce((s, r)   => s + (r.odds - 1) * stakeFor(r.odds), 0)
+               + losses.reduce((s, r) => s - stakeFor(r.odds), 0);
+  const staked = [...wins, ...losses].reduce((s, r) => s + stakeFor(r.odds), 0);
+  const roi    = staked ? (pnl / staked * 100).toFixed(1) + "%" : "—";
+  const pnlStr = staked ? `${pnl >= 0 ? "+" : ""}€${pnl.toFixed(0)} · ${roi}` : "—";
+
+  const setVal = (id, val) => {
+    const el = document.querySelector(`#${id} p:last-child`);
+    if (el) el.textContent = val;
+  };
+  const setColor = (id, positive) => {
+    const el = document.querySelector(`#${id} p:last-child`);
+    if (!el) return;
+    el.classList.remove("text-green-500", "text-red-500");
+    if (positive === true)  el.classList.add("text-green-500");
+    if (positive === false) el.classList.add("text-red-500");
   };
 
-  const LEAGUE_SHORT = { ucl: "UCL", epl: "EPL", laliga: "La Liga", seriea: "Serie A", bundesliga: "Bundesliga", ligue1: "Ligue 1" };
+  setVal("stat-total",   filteredData.length);
+  setVal("stat-record",  `${wins.length}W / ${losses.length}L`);
+  setVal("stat-winrate", winRate);
+  setVal("stat-avgev",   avgEv);
+  setVal("stat-pnl",     pnlStr);
 
-  function leagueColor(key) {
-    return LEAGUE_COLORS[key] || "bg-gray-600 dark:bg-gray-700";
+  // Colour P&L green/red; win rate green if >50%
+  if (staked) setColor("stat-pnl", pnl >= 0);
+  if (settled) setColor("stat-winrate", wins.length / settled > 0.5);
+}
+
+// ── History table ──────────────────────────────────────────────
+const HIST_COLS = [
+  { key:"kickoff",      label:"Date",   render: r => `<span class="whitespace-nowrap">${esc(new Date(r.kickoff).toLocaleDateString("en-GB",{day:"numeric",month:"short"}))}</span>` },
+  { key:"league_name",  label:"League", render: r => `<span class="whitespace-nowrap">${leagueBadge(r.league_key, r.league_name)}</span>` },
+  { key:"home_team",    label:"Match",  render: r => `<span class="whitespace-nowrap">${esc(r.home_team)} <span class="text-gray-400 mx-0.5">v</span> ${esc(r.away_team)}</span>` },
+  { key:"outcome_label",label:"Bet",    render: r => `<span class="whitespace-nowrap px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium">${esc(r.outcome_label)}</span>` },
+  { key:"odds",         label:"Odds",   render: r => `<span class="font-mono">${Number(r.odds).toFixed(2)}</span>`, align:"right" },
+  { key:"true_prob",    label:"Prob%",  render: r => `${(r.true_prob*100).toFixed(1)}%`, align:"right" },
+  { key:"ev",           label:"EV%",    render: r => evLabel(r.ev), align:"right" },
+  { key:"_score",       label:"Score",  render: r => r.actual_home_goals!=null?`${r.actual_home_goals}–${r.actual_away_goals}`:"—", sortKey:"actual_home_goals", align:"center" },
+  { key:"result",       label:"Result", render: r => resultBadge(r.result), align:"center" },
+];
+
+function renderHistory() {
+  // Build the visible row set: apply drawer filters first, then status tab
+  let allRows = [
+    ...histData.map(r => ({...r, _status: r.result === "won" ? "won" : "lost"})),
+  ];
+  // Drawer filters
+  if (activeLeague !== "all")
+    allRows = allRows.filter(r => r.league_key === activeLeague);
+  if (activeBetType !== "all")
+    allRows = allRows.filter(r => r.outcome === activeBetType);
+  if (teamSearch) {
+    const q = teamSearch.toLowerCase();
+    allRows = allRows.filter(r =>
+      r.home_team.toLowerCase().includes(q) || r.away_team.toLowerCase().includes(q)
+    );
   }
 
-  function evClass(ev) {
-    if (ev > 0.20) return "ev-danger";    // >20% — suspicious, likely stale data
-    if (ev >= 0.10) return "ev-warning";  // 10–20% — great find
-    return "ev-success";                  // 0–10% — standard value
-  }
-
-  // ---------------------------------------------------------------------------
-  // Card renderer
-  // ---------------------------------------------------------------------------
-
-  function renderCard(match) {
-    const kickoff    = match.kickoff ? formatKickoff(match.kickoff) : "—";
-    const leagueName = LEAGUE_SHORT[match.league_key] || match.league_name || "";
-    const stageBadge = match.stage
-      ? `<span class="inline-block bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-medium px-2 py-0.5 rounded mb-2 ml-1">${escHtml(match.stage)}</span>`
-      : "";
-    const homeRank = match.home_rank
-      ? `<span class="text-xs text-gray-400 dark:text-gray-500 font-normal tabular-nums">#${match.home_rank}</span> `
-      : "";
-    const awayRank = match.away_rank
-      ? `<span class="text-xs text-gray-400 dark:text-gray-500 font-normal tabular-nums">#${match.away_rank}</span> `
-      : "";
-
-    const INFO = `<svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" style="opacity:.55;flex-shrink:0"><circle cx="8" cy="8" r="7.5" stroke="currentColor" stroke-width="1" fill="none"/><rect x="7.25" y="7" width="1.5" height="5" rx=".75"/><circle cx="8" cy="4.5" r=".9"/></svg>`;
-    const WARN_ICON = `<svg class="inline-block w-3 h-3 shrink-0 align-[-0.1em]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>`;
-
-    const betRows = match.bets.map(b => {
-      const oddsReturn = (b.odds * 10).toFixed(2);
-      const oddsProfit = ((b.odds - 1) * 10).toFixed(2);
-      const probPct    = (b.true_prob * 100).toFixed(1);
-      const evPct      = (b.ev * 100).toFixed(1);
-      const evReturn   = (100 * (1 + b.ev)).toFixed(2);
-      return `
-      <tr class="border-b border-gray-100 dark:border-gray-800 last:border-0">
-        <td class="py-2 pr-4 align-middle">
-          <span class="inline-block bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded select-none">
-            ${escHtml(b.outcome_label)}
-          </span>
-        </td>
-        <td class="py-2 pr-4 font-mono text-right text-sm tabular-nums align-middle">
-          <span class="col-tip justify-end">${b.odds.toFixed(2)}<span class="tip">Decimal bookmaker odds. ${b.odds.toFixed(2)} means a €10 bet returns €${oddsReturn} total (€${oddsProfit} profit).</span></span>
-        </td>
-        <td class="py-2 pr-4 font-mono text-right text-sm tabular-nums align-middle text-gray-600 dark:text-gray-400">
-          <span class="col-tip justify-end">${probPct}%<span class="tip">Model's estimated true probability. ${probPct}% means the model expects this outcome about ${probPct} times in 100.</span></span>
-        </td>
-        <td class="py-2 font-mono text-right text-sm tabular-nums align-middle ${evClass(b.ev)}">
-          <span class="col-tip justify-end">${b.ev > 0.20 ? WARN_ICON + " " : ""}+${evPct}%<span class="tip">Expected Value = (prob × odds) − 1. At +${evPct}%, a €100 bet returns €${evReturn} on average over many bets.</span></span>
-        </td>
-      </tr>`;
-    }).join("");
-
-
-    const fatigueWarnings = [];
-    if (match.home_rest_days != null && match.home_rest_days < 4)
-      fatigueWarnings.push(`${escHtml(match.home_team)} ${match.home_rest_days} days rest`);
-    if (match.away_rest_days != null && match.away_rest_days < 4)
-      fatigueWarnings.push(`${escHtml(match.away_team)} ${match.away_rest_days} days rest`);
-    const fatigueRow = fatigueWarnings.length
-      ? `<p class="mt-1 text-xs text-amber-500 dark:text-amber-400 font-medium flex items-center gap-1">${WARN_ICON} ${fatigueWarnings.join("  ·  ")}</p>`
-      : "";
-    const h2hBadge = match.h2h_used
-      ? `<span class="inline-block text-xs text-gray-400 dark:text-gray-500 ml-1" title="Head-to-head history blended into model">Head-to-Head</span>`
-      : "";
-
-    // 2nd Leg badge
-    const secondLegBadge = match.is_second_leg
-      ? `<span class="inline-block bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-bold px-2 py-0.5 rounded mb-2 ml-1 uppercase tracking-wider">2nd Leg</span>`
-      : "";
-
-    // Aggregate score row
-    let aggRow = "";
-    if (match.is_second_leg && match.agg_home != null && match.agg_away != null) {
-      const diff = match.agg_home - match.agg_away;
-      const homeLeads = diff > 0;
-      const awayLeads = diff < 0;
-
-      const homeScoreClass = homeLeads
-        ? "text-green-600 dark:text-green-400 font-bold"
-        : awayLeads ? "text-red-500 dark:text-red-400" : "text-gray-700 dark:text-gray-200";
-      const awayScoreClass = awayLeads
-        ? "text-green-600 dark:text-green-400 font-bold"
-        : homeLeads ? "text-red-500 dark:text-red-400" : "text-gray-700 dark:text-gray-200";
-
-      aggRow = `
-        <p class="mt-1 flex items-center gap-x-1 text-xs text-gray-500 dark:text-gray-400">
-          <span class="font-semibold text-gray-700 dark:text-gray-200">Agg:</span>
-          <span class="font-mono font-semibold">
-            <span class="${homeScoreClass}">${match.agg_home}</span><span class="text-gray-400 dark:text-gray-600">–</span><span class="${awayScoreClass}">${match.agg_away}</span>
-          </span>
-        </p>`;
-    }
-    const homeCrest = match.home_crest
-      ? `<img src="${escHtml(match.home_crest)}" class="inline-block w-5 h-5 object-contain mr-1 align-middle" onerror="this.style.display='none'" loading="lazy">`
-      : "";
-    const awayCrest = match.away_crest
-      ? `<img src="${escHtml(match.away_crest)}" class="inline-block w-5 h-5 object-contain mr-1 align-middle" onerror="this.style.display='none'" loading="lazy">`
-      : "";
-
-    function formBubble(r) {
-      const cls = r === "W"
-        ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400"
-        : r === "L"
-        ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400"
-        : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400";
-      return `<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-semibold ${cls}">${r}</span>`;
-    }
-    const homeFormHtml = Array.isArray(match.home_form) && match.home_form.length
-      ? match.home_form.map(formBubble).join("")
-      : "";
-    const awayFormHtml = Array.isArray(match.away_form) && match.away_form.length
-      ? match.away_form.map(formBubble).join("")
-      : "";
-    const recentLabel = `<span class="hidden md:flex ml-2 text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider items-center gap-0.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>Recent</span>`;
-    const hasForm = !!(homeFormHtml || awayFormHtml);
-
-    return `
-      <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm">
-
-        <!-- Match header -->
-        <div class="px-5 pt-4 pb-3">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              ${leagueName
-                ? `<span class="inline-block ${leagueColor(match.league_key)} text-white text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-2">${escHtml(leagueName)}</span>`
-                : ""}${stageBadge}${secondLegBadge}
-              <div class="grid grid-cols-1 md:grid-cols-[max-content_max-content_1fr] md:items-center gap-x-3 gap-y-1">
-                <div class="order-1 md:order-none flex items-center gap-1 text-base font-semibold">
-                  ${homeRank}${homeCrest}${escHtml(match.home_team)}
-                </div>
-                <div class="hidden md:block text-xs font-bold text-gray-400 dark:text-gray-500 text-center">vs</div>
-                <div class="order-3 md:order-none flex items-center gap-1 text-base font-semibold">
-                  ${awayRank}${awayCrest}${escHtml(match.away_team)}${h2hBadge ? ` ${h2hBadge}` : ""}
-                </div>
-                ${hasForm ? `
-                <div class="order-2 md:order-none flex items-center gap-0.5 flex-wrap">${homeFormHtml}</div>
-                <div class="hidden md:block text-gray-300 dark:text-gray-700 select-none text-center">·</div>
-                <div class="order-4 md:order-none flex items-center gap-0.5 flex-wrap">${awayFormHtml}${recentLabel}</div>
-                ` : ""}
-              </div>
-              ${fatigueRow}
-              ${aggRow}
-            </div>
-            <p class="shrink-0 text-sm font-semibold text-gray-500 dark:text-gray-400 tabular-nums whitespace-nowrap pt-0.5">${escHtml(kickoff)}</p>
-          </div>
-        </div>
-
-        <!-- Divider -->
-        <div class="border-t border-gray-100 dark:border-gray-800 mx-0"></div>
-
-        <!-- Bets table -->
-        <div class="px-5 pt-3 pb-4">
-          <table class="w-full table-fixed">
-            <colgroup>
-              <col>
-              <col style="width:72px">
-              <col style="width:72px">
-              <col style="width:96px">
-            </colgroup>
-            <thead>
-              <tr class="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                <th class="pb-2 text-left font-semibold align-bottom">Bet</th>
-                <th class="pb-2 pr-4 text-right font-semibold align-bottom">
-                  <span class="col-tip justify-end"><span>Odds</span>${INFO}
-                    <span class="tip">Decimal bookmaker odds — hover a cell for a worked example.</span>
-                  </span>
-                </th>
-                <th class="pb-2 pr-4 text-right font-semibold align-bottom">
-                  <span class="col-tip justify-end"><span>Chance</span>${INFO}
-                    <span class="tip">Model's estimated true probability (Poisson goal model) — hover a cell for detail.</span>
-                  </span>
-                </th>
-                <th class="pb-2 text-right font-semibold align-bottom">
-                  <span class="col-tip justify-end"><span>Exp. Value</span>${INFO}
-                    <span class="tip">Expected Value = (true probability × odds) − 1. Green 0–10%: solid edge. Amber 10–20%: strong find. ${WARN_ICON} Red &gt;20%: model may lack recent data — verify injury news. Hover a cell for a €100 example.</span>
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>${betRows}</tbody>
-          </table>
-        </div>
-
-      </div>`;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Bet list renderer (groups by day)
-  // ---------------------------------------------------------------------------
-
-  function renderBetList(bets, container) {
-    if (bets.length === 0) {
-      container.innerHTML = `
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
-          No value bets match the current filters.
-        </div>`;
-      return;
-    }
-
-    const groups = new Map();
-    for (const bet of bets) {
-      const dayKey = bet.kickoff
-        ? new Date(bet.kickoff).toLocaleDateString(undefined, { year: "numeric", month: "2-digit", day: "2-digit" })
-        : "Unknown";
-      if (!groups.has(dayKey)) {
-        groups.set(dayKey, {
-          label: bet.kickoff
-            ? new Date(bet.kickoff).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })
-            : "Unknown date",
-          bets: [],
-        });
-      }
-      groups.get(dayKey).bets.push(bet);
-    }
-
-    const parts = [];
-    for (const { label, bets: dayBets } of groups.values()) {
-      parts.push(`
-        <div class="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 pt-2 pb-1.5 border-b-2 border-gray-200 dark:border-gray-700">
-          ${escHtml(label)}
-        </div>`);
-      parts.push(...dayBets.map(renderCard));
-    }
-
-    container.innerHTML = parts.join("");
-  }
-
-  // ---------------------------------------------------------------------------
-  // Tab rendering (sidebar + mobile bar share the same data; listeners added once)
-  // ---------------------------------------------------------------------------
-
-  function tabBtnHtml(t, mobile, isActive) {
-    const betCount = t.bets.length;
-
-    if (mobile) {
-      const activeClasses  = "bg-blue-600 border-blue-600 text-white";
-      const defaultClasses = "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-500 dark:hover:border-blue-500 hover:text-gray-900 dark:hover:text-gray-100";
-      const countClasses   = isActive ? "bg-white/25 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400";
-      return `<button
-        class="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-colors ${isActive ? activeClasses : defaultClasses}"
-        data-tab="${escHtml(t.key)}">
-        <span>${escHtml(t.name)}</span>
-        <span class="text-xs px-1.5 py-0.5 rounded-full ${countClasses}">${betCount}</span>
-      </button>`;
-    } else {
-      const activeClasses  = "bg-blue-600 border-blue-600 text-white";
-      const defaultClasses = "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-500 dark:hover:border-blue-500 hover:text-gray-900 dark:hover:text-gray-100";
-      const countClasses   = isActive ? "bg-white/25 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400";
-      return `<button
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-semibold transition-colors ${isActive ? activeClasses : defaultClasses}"
-        data-tab="${escHtml(t.key)}">
-        <span>${escHtml(t.name)}</span>
-        <span class="text-xs px-1.5 py-0.5 rounded-full ${countClasses}">${betCount}</span>
-      </button>`;
-    }
-  }
-
-  function updateTabUI(tabs, activeKey) {
-    const leagueBar  = document.getElementById("league-bar");
-    const leagueTabs = tabs.filter(t => t.key !== "__history__");
-    leagueBar.innerHTML = leagueTabs.map(t => tabBtnHtml(t, true, t.key === activeKey)).join("");
-  }
-
-  // ---------------------------------------------------------------------------
-  // History tab renderer
-  // ---------------------------------------------------------------------------
-
-  function renderHistory(history, container) {
-    if (!history || !history.length) {
-      container.innerHTML = `
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
-          No bet history yet. Run the engine daily and results will appear here automatically.
-        </div>`;
-      return;
-    }
-
-    // ── League key resolution (history may omit league_key) ──────────────────
-    function leagueKeyFromName(name) {
-      const n = (name || "").toLowerCase();
-      if (n.includes("premier"))                      return "epl";
-      if (n.includes("la liga") || n.includes("laliga")) return "laliga";
-      if (n.includes("serie a"))                      return "seriea";
-      if (n.includes("bundesliga"))                   return "bundesliga";
-      if (n.includes("ligue"))                        return "ligue1";
-      if (n.includes("champions") || n.includes("ucl")) return "ucl";
-      return null;
-    }
-    function hLeagueKey(h) { return h.league_key || leagueKeyFromName(h.league_name); }
-
-    // ── Base stats ────────────────────────────────────────────────────────────
-    const settled  = history.filter(h => h.settled);
-    const pending  = history.filter(h => !h.settled)
-      .sort((a, b) => {
-        const da = a.kickoff ? new Date(a.kickoff) : (a.recorded_date ? new Date(a.recorded_date) : 0);
-        const db = b.kickoff ? new Date(b.kickoff) : (b.recorded_date ? new Date(b.recorded_date) : 0);
-        return da - db;
-      });
-    const wins     = settled.filter(h => h.result === "won").length;
-    const losses   = settled.filter(h => h.result === "lost").length;
-    function stakeFor(odds) { return odds < 2 ? 20 : odds < 3 ? 10 : 5; }
-    const pnl      = settled.reduce((acc, h) => {
-      const s = stakeFor(h.odds);
-      return acc + (h.result === "won" ? (h.odds - 1) * s : -s);
-    }, 0);
-    const pnlClass = pnl >= 0
-      ? "text-green-600 dark:text-green-400"
-      : "text-red-500 dark:text-red-400";
-    const totalStake    = settled.reduce((acc, h) => acc + stakeFor(h.odds), 0);
-    const roi          = totalStake
-      ? ((pnl / totalStake) * 100).toFixed(1)
-      : "—";
-    const overallRoiNum = totalStake
-      ? (pnl / totalStake) * 100
-      : null;
-    const winRate  = settled.length
-      ? (wins / settled.length * 100).toFixed(0) + "%"
-      : "—";
-    const avgEv    = history.length
-      ? "+" + (history.reduce((a, h) => a + h.ev, 0) / history.length * 100).toFixed(1) + "%"
-      : "—";
-
-    // ── Last 30 days ──────────────────────────────────────────────────────────
-    const MS_30D           = 30 * 24 * 60 * 60 * 1000;
-    const now              = Date.now();
-    const lastMonthSettled = settled.filter(h => {
-      const d = h.kickoff ? new Date(h.kickoff) : (h.recorded_date ? new Date(h.recorded_date) : null);
-      return d && (now - d.getTime()) <= MS_30D;
-    });
-    const lmPnl   = lastMonthSettled.reduce((acc, h) => {
-      const s = stakeFor(h.odds);
-      return acc + (h.result === "won" ? (h.odds - 1) * s : -s);
-    }, 0);
-    const lmTotalStake = lastMonthSettled.reduce((acc, h) => acc + stakeFor(h.odds), 0);
-    const lmRoiNum = lmTotalStake
-      ? (lmPnl / lmTotalStake) * 100
-      : null;
-    const lmRoi   = lmRoiNum !== null ? lmRoiNum.toFixed(1) : null;
-    const lmDelta = (lmRoiNum !== null && overallRoiNum !== null)
-      ? (lmRoiNum - overallRoiNum).toFixed(1)
-      : null;
-    const lmClass = lmRoiNum === null ? "text-gray-400"
-      : lmRoiNum >= 0 ? "text-green-600 dark:text-green-400"
-      : "text-red-500 dark:text-red-400";
-
-    // ── Per-league stats ──────────────────────────────────────────────────────
-    const leagueMap = new Map();
-    for (const h of history) {
-      const name = h.league_name || "Unknown";
-      if (!leagueMap.has(name)) leagueMap.set(name, { name, key: hLeagueKey(h), all: [], settled: [] });
-      leagueMap.get(name).all.push(h);
-      if (h.settled) leagueMap.get(name).settled.push(h);
-    }
-
-    function resultBadge(h) {
-      if (!h.settled) return `<span class="inline-block bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs font-semibold px-2 py-0.5 rounded">Pending</span>`;
-      return h.result === "won"
-        ? `<span class="inline-block bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-xs font-semibold px-2 py-0.5 rounded">Won</span>`
-        : `<span class="inline-block bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 text-xs font-semibold px-2 py-0.5 rounded">Lost</span>`;
-    }
-
-    function scoreCell(h) {
-      if (!h.settled || h.actual_home_goals == null) return `<span class="text-gray-400">—</span>`;
-      return `<span class="font-mono font-semibold">${h.actual_home_goals}–${h.actual_away_goals}</span>`;
-    }
-
-    function rowDateKey(h) {
-      const ko = h.kickoff ? new Date(h.kickoff) : null;
-      return ko
-        ? ko.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })
-        : (h.recorded_date || "Unknown");
-    }
-
-    function historyRow(h, isFirstBet = true, isLastBet = true) {
-      const borderClass = isLastBet ? "border-b border-gray-100 dark:border-gray-800" : "";
-      return `
-        <tr class="${borderClass} hover:bg-gray-50 dark:hover:bg-gray-800/50">
-          <td class="py-2 px-4 whitespace-nowrap">
-            ${isFirstBet ? `<span class="inline-block ${leagueColor(hLeagueKey(h))} text-white text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">${escHtml(LEAGUE_SHORT[hLeagueKey(h)] || h.league_name || "—")}</span>` : ""}
-          </td>
-          <td class="py-2 px-4 text-sm">
-            ${isFirstBet ? `<div><span class="font-medium">${escHtml(h.home_team)}</span>
-            <span class="text-gray-400 dark:text-gray-500 mx-1 text-xs">vs</span>
-            <span class="font-medium">${escHtml(h.away_team)}</span></div>` : ""}
-          </td>
-          <td class="py-2 px-4">
-            <span class="inline-block bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-semibold px-2 py-0.5 rounded">${escHtml(h.outcome_label)}</span>
-          </td>
-          <td class="py-2 px-4 font-mono text-sm text-right tabular-nums">${h.odds.toFixed(2)}</td>
-          <td class="py-2 px-4 text-sm text-right tabular-nums text-gray-500 dark:text-gray-400">${(h.true_prob * 100).toFixed(1)}%</td>
-          <td class="py-2 px-4 text-sm text-right tabular-nums font-semibold ${evClass(h.ev)}">+${(h.ev * 100).toFixed(1)}%</td>
-          <td class="py-2 px-4 text-sm text-center">${scoreCell(h)}</td>
-          <td class="py-2 px-4">${resultBadge(h)}</td>
-        </tr>`;
-    }
-
-    function tableHtml(rows) {
-      if (!rows.length) return `
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-6 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
-          No bets in this category.
-        </div>`;
-
-      // Group rows by date
-      const groupOrder = [];
-      const groupMap   = new Map();
-      for (const h of rows) {
-        const key = rowDateKey(h);
-        if (!groupMap.has(key)) { groupMap.set(key, []); groupOrder.push(key); }
-        groupMap.get(key).push(h);
-      }
-
-      const bodyRows = groupOrder.map(key => {
-        // Group bets within this date by match
-        const matchOrder = [];
-        const matchMap   = new Map();
-        for (const h of groupMap.get(key)) {
-          const mKey = `${h.home_team}|${h.away_team}`;
-          if (!matchMap.has(mKey)) { matchMap.set(mKey, []); matchOrder.push(mKey); }
-          matchMap.get(mKey).push(h);
-        }
-        const rowsHtml = matchOrder.map(mKey => {
-          const bets = matchMap.get(mKey);
-          return bets.map((h, i) => historyRow(h, i === 0, i === bets.length - 1)).join("");
-        }).join("");
-        return `
-        <tr>
-          <td colspan="8" class="px-4 pt-3 pb-1 text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50">${escHtml(key)}</td>
-        </tr>
-        ${rowsHtml}`;
-      }).join("");
-
-      return `
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl">
-          <div class="w-full overflow-x-auto no-scrollbar">
-          <table class="min-w-max w-full text-left">
-            <thead>
-              <tr class="border-b border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                <th class="px-4 py-2 font-semibold">League</th>
-                <th class="px-4 py-2 font-semibold">Match</th>
-                <th class="px-4 py-2 font-semibold">Bet</th>
-                <th class="px-4 py-2 font-semibold text-right">Odds</th>
-                <th class="px-4 py-2 font-semibold text-right">Model%</th>
-                <th class="px-4 py-2 font-semibold text-right">EV</th>
-                <th class="px-4 py-2 font-semibold text-center">Score</th>
-                <th class="px-4 py-2 font-semibold">Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${bodyRows}
-            </tbody>
-          </table>
-          </div>
-        </div>`;
-    }
-
-    const FILTERS = [
-      { key: "pending", label: "Pending", rows: () => pending },
-      { key: "settled", label: "Settled", rows: () => settled },
-      { key: "won",     label: "Won",     rows: () => settled.filter(h => h.result === "won") },
-      { key: "lost",    label: "Lost",    rows: () => settled.filter(h => h.result === "lost") },
-    ];
-
-    let activeFilter = pending.length ? "pending" : "settled";
-
-    // ── Last 30d card HTML ────────────────────────────────────────────────────
-    const lmDeltaHtml = lmDelta !== null
-      ? `<div class="text-xs mt-1 text-gray-400 dark:text-gray-500">
-           vs ${overallRoiNum >= 0 ? "+" : ""}${overallRoiNum.toFixed(1)}% overall
-           <span class="${parseFloat(lmDelta) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500 dark:text-red-400"} font-semibold ml-1">${parseFloat(lmDelta) >= 0 ? "▲ +" : "▼ "}${lmDelta}%</span>
-         </div>`
-      : `<div class="text-xs mt-1 text-gray-400 dark:text-gray-500">No settled bets yet</div>`;
-
-    // ── Per-league cards HTML ─────────────────────────────────────────────────
-    const leagueCardsHtml = Array.from(leagueMap.values()).map(lg => {
-      const lgWins   = lg.settled.filter(h => h.result === "won").length;
-      const lgLosses = lg.settled.filter(h => h.result === "lost").length;
-      const lgPnl    = lg.settled.reduce((acc, h) => {
-        const s = stakeFor(h.odds);
-        return acc + (h.result === "won" ? (h.odds - 1) * s : -s);
-      }, 0);
-      const lgTotalStake = lg.settled.reduce((acc, h) => acc + stakeFor(h.odds), 0);
-      const lgRoiNum = lgTotalStake ? (lgPnl / lgTotalStake) * 100 : null;
-      const lgRoi    = lgRoiNum !== null ? (lgRoiNum >= 0 ? "+" : "") + lgRoiNum.toFixed(1) + "%" : "—";
-      const lgRoiClass = lgRoiNum === null ? "text-gray-400"
-        : lgRoiNum >= 0 ? "text-green-600 dark:text-green-400"
-        : "text-red-500 dark:text-red-400";
-      return `
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 min-w-0 min-h-0">
-          <div class="flex items-center gap-1.5 mb-2">
-            <span class="inline-block ${leagueColor(lg.key)} text-white text-xs font-bold px-1.5 py-0.5 rounded uppercase leading-tight whitespace-nowrap">${escHtml(LEAGUE_SHORT[lg.key] || lg.name)}</span>
-          </div>
-          <div class="text-xs text-gray-400 dark:text-gray-500">${lg.all.length} bets · <span class="text-green-600 dark:text-green-400 font-semibold">${lgWins}W</span>/<span class="text-red-500 dark:text-red-400 font-semibold">${lgLosses}L</span></div>
-          <div class="text-lg font-bold ${lgRoiClass} mt-0.5">${lgRoi} <span class="text-xs font-normal text-gray-400">ROI</span></div>
-        </div>`;
-    }).join("");
-
-    const summaryHtml = `
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
-          <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Total Bets</div>
-          <div class="text-2xl font-bold text-gray-900 dark:text-white">${history.length}</div>
-        </div>
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
-          <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Record</div>
-          <div class="text-2xl font-bold"><span class="text-green-600 dark:text-green-400">${wins}W</span><span class="text-gray-300 dark:text-gray-600 mx-1">/</span><span class="text-red-500 dark:text-red-400">${losses}L</span></div>
-        </div>
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
-          <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Win Rate</div>
-          <div class="text-2xl font-bold text-gray-900 dark:text-white">${winRate}</div>
-        </div>
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
-          <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Avg EV</div>
-          <div class="text-2xl font-bold text-gray-900 dark:text-white">${avgEv}</div>
-        </div>
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
-          <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">P&amp;L · ROI</div>
-          <div class="text-2xl font-bold ${pnlClass}">${pnl >= 0 ? "+" : ""}€${pnl.toFixed(0)}<span class="text-base font-semibold ml-1">${pnl >= 0 ? "+" : ""}${roi}%</span></div>
-        </div>
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3">
-          <div class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Last 30 Days</div>
-          <div class="text-2xl font-bold ${lmClass}">${lmRoi !== null ? (parseFloat(lmRoi) >= 0 ? "+" : "") + lmRoi + "%" : "—"}</div>
-          ${lmDeltaHtml}
-        </div>
-      </div>
-      ${leagueMap.size > 0 ? `
-      <div class="mb-5">
-        <div class="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">By League</div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">${leagueCardsHtml}</div>
-      </div>` : ""}`;
-
-    function tabsHtml(active) {
-      return `<div class="flex gap-1 border-b border-gray-200 dark:border-gray-700 mb-4 overflow-x-auto no-scrollbar whitespace-nowrap">
-        ${FILTERS.map(f => {
-          const isActive = f.key === active;
-          const count = f.rows().length;
-          return `<button data-hfilter="${f.key}" class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${isActive
-            ? "border-blue-500 text-gray-900 dark:text-white"
-            : "border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"}">${escHtml(f.label)}<span class="ml-1.5 text-xs ${isActive ? "text-blue-500" : "text-gray-400 dark:text-gray-600"}">${count}</span></button>`;
-        }).join("")}
-      </div>`;
-    }
-
-    function refresh() {
-      const f = FILTERS.find(f => f.key === activeFilter);
-      document.getElementById("hist-tabs").innerHTML  = tabsHtml(activeFilter);
-      document.getElementById("hist-table").innerHTML = tableHtml(f ? f.rows() : []);
-      document.querySelectorAll("[data-hfilter]").forEach(btn => {
-        btn.addEventListener("click", () => { activeFilter = btn.dataset.hfilter; refresh(); });
-      });
-    }
-
-    container.innerHTML = summaryHtml
-      + `<div id="hist-tabs"></div>`
-      + `<div id="hist-table"></div>`;
-
-    refresh();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Main loader
-  // ---------------------------------------------------------------------------
-
-  function loadReport() {
-    const container = document.getElementById("container");
-    const errorMsg  = document.getElementById("error-msg");
-    const footer    = document.getElementById("footer");
-
-    try {
-      const raw  = document.getElementById("report-data").textContent.trim();
-      const data = JSON.parse(raw);
-
-      if (!data || !data.value_bets) {
-        errorMsg.classList.remove("hidden");
-        errorMsg.textContent = "No report found. Run python main.py first to generate today's report.";
-        return;
-      }
-
-      // Migrate old flat format (one entry per outcome) → new nested format (one per match)
-      if (data.value_bets.length > 0 && !data.value_bets[0].bets) {
-        const matchMap = new Map();
-        for (const b of data.value_bets) {
-          const key = `${b.league_key}|${b.home_team}|${b.away_team}|${b.kickoff}`;
-          if (!matchMap.has(key)) {
-            matchMap.set(key, {
-              league_key: b.league_key, league_name: b.league_name,
-              home_team: b.home_team,   away_team: b.away_team,
-              kickoff: b.kickoff,       kickoff_local: b.kickoff_local,
-              btts_yes_prob: b.btts_yes_prob ?? null,
-              bets: [],
-            });
-          }
-          matchMap.get(key).bets.push({
-            outcome: b.outcome, outcome_label: b.outcome_label,
-            odds: b.odds, true_prob: b.true_prob, ev: b.ev,
-          });
-        }
-        data.value_bets = Array.from(matchMap.values());
-      }
-
-
-      if (data.value_bets.length === 0) {
-        container.innerHTML = `
-          <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
-            No value bets found today. Check back tomorrow.
-          </div>`;
-        return;
-      }
-
-      // Build tab list
-      const leagueMap = new Map();
-      for (const match of data.value_bets) {
-        const key = match.league_key || "other";
-        if (!leagueMap.has(key)) leagueMap.set(key, { key, name: LEAGUE_SHORT[key] || match.league_name || key, bets: [] });
-        leagueMap.get(key).bets.push(match);
-      }
-      const history = data.history || [];
-      const historyTab = { key: "__history__", name: "History", bets: history };
-      const tabs = [{ key: "all", name: "All", bets: data.value_bets }, ...leagueMap.values(), historyTab];
-      let activeTab = "all";
-      let activeBetType = "all";
-      let activeTeamSearch = "";
-      let currentTabMatches = [];
-      let advFilters = { evMin: null, evMax: null, oddsMin: null, oddsMax: null, probMin: 0, safeMode: false };
-      function parseFloatOrNull(v) { const n = parseFloat(v); return isNaN(n) ? null : n; }
-
-      function updateFilterBadge() {
-        const count = [
-          activeTab !== "all",
-          activeBetType !== "all",
-          advFilters.evMin   !== null,
-          advFilters.evMax   !== null,
-          advFilters.oddsMin !== null,
-          advFilters.oddsMax !== null,
-          advFilters.probMin > 0,
-          advFilters.safeMode,
-        ].filter(Boolean).length;
-        const badge    = document.getElementById("filters-count-badge");
-        const clearBtn = document.getElementById("clear-filters-btn");
-        if (badge) {
-          badge.textContent = count;
-          badge.style.display = count === 0 ? "none" : "inline-flex";
-        }
-        if (clearBtn) {
-          clearBtn.disabled = count === 0;
-          clearBtn.className = count === 0
-            ? "flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-600 transition-colors opacity-50 cursor-not-allowed"
-            : "flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-gray-900 text-red-500 dark:text-red-400 hover:border-red-400 dark:hover:border-red-600 hover:text-red-700 dark:hover:text-red-300 transition-colors";
-        }
-        updateFilterChips();
-      }
-
-      function updateFilterChips() {
-        const chips = [];
-        if (activeTab !== "all") {
-          const tab = tabs.find(t => t.key === activeTab);
-          if (tab) chips.push(tab.name);
-        }
-        if (activeBetType !== "all") {
-          const bt = BET_TYPES.find(t => t.key === activeBetType);
-          if (bt) chips.push(bt.label);
-        }
-        if (advFilters.evMin   !== null) chips.push(`EV ≥ ${advFilters.evMin}%`);
-        if (advFilters.evMax   !== null) chips.push(`EV ≤ ${advFilters.evMax}%`);
-        if (advFilters.oddsMin !== null) chips.push(`Odds ≥ ${advFilters.oddsMin}`);
-        if (advFilters.oddsMax !== null) chips.push(`Odds ≤ ${advFilters.oddsMax}`);
-        if (advFilters.probMin > 0)      chips.push(`Prob ≥ ${advFilters.probMin}%`);
-        if (advFilters.safeMode)         chips.push("Safe Mode");
-        const container = document.getElementById("active-filters-chips");
-        if (!container) return;
-        container.innerHTML = chips.map(label =>
-          `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">${escHtml(label)}</span>`
-        ).join("");
-      }
-
-      function syncAdvFilters() {
-        advFilters = {
-          evMin:    parseFloatOrNull(document.getElementById("filter-ev-min").value),
-          evMax:    parseFloatOrNull(document.getElementById("filter-ev-max").value),
-          oddsMin:  parseFloatOrNull(document.getElementById("filter-odds-min").value),
-          oddsMax:  parseFloatOrNull(document.getElementById("filter-odds-max").value),
-          probMin:  parseFloat(document.getElementById("filter-prob-min").value) || 0,
-          safeMode: document.getElementById("filter-safe-mode").checked,
-        };
-        applyFilters();
-      }
-
-      const BET_TYPES = [
-        { key: "all",       label: "All Types" },
-        { key: "home_win",  label: "Home Win" },
-        { key: "draw",      label: "Draw" },
-        { key: "away_win",  label: "Away Win" },
-        { key: "over_2_5",  label: "Over 2.5" },
-        { key: "under_2_5", label: "Under 2.5" },
-        { key: "btts_yes",  label: "BTTS Yes" },
-        { key: "btts_no",   label: "BTTS No" },
-      ];
-
-      function applyFilters() {
-        const filterWrapper = document.getElementById("filter-wrapper");
-        if (activeTab === "__history__") {
-          if (filterWrapper) filterWrapper.classList.add("hidden");
-          renderHistory(history, container);
-          return;
-        }
-        if (filterWrapper) filterWrapper.classList.remove("hidden");
-
-        const tab = tabs.find(t => t.key === activeTab);
-        let matches = tab ? tab.bets : [];
-
-        if (activeTeamSearch.trim()) {
-          const q = activeTeamSearch.trim().toLowerCase();
-          matches = matches.filter(m =>
-            m.home_team.toLowerCase().includes(q) ||
-            m.away_team.toLowerCase().includes(q)
-          );
-        }
-
-        currentTabMatches = matches;
-        updateBetTypePills(matches);
-
-        if (activeBetType !== "all") {
-          matches = matches
-            .map(m => ({ ...m, bets: m.bets.filter(b => b.outcome === activeBetType) }))
-            .filter(m => m.bets.length > 0);
-        }
-
-        matches = matches.map(m => ({
-          ...m,
-          bets: m.bets.filter(b => {
-            if (advFilters.evMin  !== null && b.ev * 100 < advFilters.evMin)  return false;
-            if (advFilters.evMax  !== null && b.ev * 100 > advFilters.evMax)  return false;
-            if (advFilters.oddsMin !== null && b.odds < advFilters.oddsMin)   return false;
-            if (advFilters.oddsMax !== null && b.odds > advFilters.oddsMax)   return false;
-            if (advFilters.probMin > 0 && (b.true_prob ?? 0) * 100 < advFilters.probMin) return false;
-            if (advFilters.safeMode && b.ev > 0.20) return false;
-            return true;
-          })
-        })).filter(m => m.bets.length > 0);
-
-        updateFilterBadge();
-        renderBetList(matches, container);
-      }
-
-      function updateBetTypePills(matches) {
-        const pContainer = document.getElementById("bet-type-pills");
-        if (!pContainer) return;
-        pContainer.innerHTML = BET_TYPES.map(t => {
-          const isActive = t.key === activeBetType;
-          const count = t.key === "all"
-            ? matches.length
-            : matches.filter(m => m.bets.some(b => b.outcome === t.key)).length;
-          const activeClasses  = "bg-blue-600 border-blue-600 text-white";
-          const defaultClasses = "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-500 dark:hover:border-blue-500 hover:text-gray-900 dark:hover:text-gray-100";
-          const countClasses   = isActive ? "bg-white/25 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400";
-          return `<button data-bet-type="${escHtml(t.key)}"
-            class="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-colors ${isActive ? activeClasses : defaultClasses}">
-            <span>${escHtml(t.label)}</span>
-            <span class="text-xs px-1.5 py-0.5 rounded-full ${countClasses}">${count}</span>
-          </button>`;
-        }).join("");
-      }
-
-      function updateBetTypeUI() {
-        updateBetTypePills(currentTabMatches);
-      }
-
-      function buildFilterBar() {
-        const filterBar = document.getElementById("filter-bar");
-        filterBar.innerHTML = `
-          <input id="team-search" type="text" placeholder="Search team…"
-            class="w-full md:w-auto px-3 py-1 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value="${escHtml(activeTeamSearch)}">
-          <button id="open-filters-btn"
-            class="w-full md:w-auto flex justify-center items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"/>
-            </svg>
-            Filters
-            <span id="filters-count-badge" style="display:none" class="inline-flex items-center justify-center text-xs font-bold bg-blue-600 text-white rounded-full w-4 h-4">0</span>
-          </button>
-          <button id="clear-filters-btn" disabled
-            class="w-full md:w-auto flex justify-center items-center gap-1 px-3 py-1 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-400 dark:text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-            </svg>
-            Clear filters
-          </button>
-          <div id="active-filters-chips" class="flex items-center gap-2 flex-wrap"></div>`;
-
-        function openDrawer() {
-          document.getElementById("filters-drawer").classList.remove("translate-x-full");
-          document.getElementById("filters-backdrop").classList.remove("hidden");
-          document.body.classList.add("overflow-hidden");
-        }
-        function closeDrawer() {
-          document.getElementById("filters-drawer").classList.add("translate-x-full");
-          document.getElementById("filters-backdrop").classList.add("hidden");
-          document.body.classList.remove("overflow-hidden");
-        }
-
-        document.addEventListener("click", e => {
-          if (e.target.closest("#open-filters-btn"))  { openDrawer();  return; }
-          if (e.target.closest("#close-filters-btn")) { closeDrawer(); return; }
-          if (e.target.closest("#filters-backdrop"))  { closeDrawer(); return; }
-          if (e.target.closest("#clear-filters-btn")) {
-            advFilters = { evMin: null, evMax: null, oddsMin: null, oddsMax: null, probMin: 0, safeMode: false };
-            activeTab = "all";
-            activeBetType = "all";
-            document.getElementById("filter-ev-min").value   = "";
-            document.getElementById("filter-ev-max").value   = "";
-            document.getElementById("filter-odds-min").value = "";
-            document.getElementById("filter-odds-max").value = "";
-            document.getElementById("filter-prob-min").value = 0;
-            document.getElementById("filter-prob-min-value").textContent = "0%";
-            document.getElementById("filter-safe-mode").checked = false;
-            updateTabUI(tabs, activeTab);
-            updateNavUI(activeTab);
-            applyFilters();
-            return;
-          }
-          const tabBtn = e.target.closest("[data-tab]");
-          if (tabBtn) { activateTab(tabBtn.dataset.tab); return; }
-          const btn = e.target.closest("[data-bet-type]");
-          if (btn) {
-            activeBetType = btn.dataset.betType;
-            updateBetTypeUI();
-            applyFilters();
-          }
-        });
-
-        ["filter-ev-min","filter-ev-max","filter-odds-min","filter-odds-max"].forEach(id => {
-          document.getElementById(id).addEventListener("input", syncAdvFilters);
-        });
-        document.getElementById("filter-prob-min").addEventListener("input", e => {
-          document.getElementById("filter-prob-min-value").textContent = e.target.value + "%";
-          syncAdvFilters();
-        });
-        document.getElementById("filter-safe-mode").addEventListener("change", syncAdvFilters);
-
-        let debounceTimer;
-        document.getElementById("team-search").addEventListener("input", e => {
-          clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => {
-            activeTeamSearch = e.target.value;
-            applyFilters();
-          }, 200);
-        });
-      }
-
-      function updateNavUI(activeKey) {
-        const dashBtn = document.getElementById("nav-dashboard");
-        const histBtn = document.getElementById("nav-history");
-        if (!dashBtn || !histBtn) return;
-        const isHistory = activeKey === "__history__";
-        dashBtn.className = `px-1 py-2 text-sm font-semibold transition-colors ${
-          isHistory ? "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                    : "text-gray-900 dark:text-white border-b-2 border-blue-600"}`;
-        histBtn.className = `px-1 py-2 text-sm font-semibold transition-colors ${
-          isHistory ? "text-gray-900 dark:text-white border-b-2 border-blue-600"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"}`;
-      }
-
-      function activateTab(tabKey) {
-        activeTab = tabKey;
-        updateTabUI(tabs, activeTab);
-        updateNavUI(tabKey);
-        applyFilters();
-      }
-
-      // Single delegated listener for both nav elements
-      function handleTabClick(e) {
-        const btn = e.target.closest("[data-tab]");
-        if (btn) activateTab(btn.dataset.tab);
-      }
-      updateTabUI(tabs, activeTab);
-      buildFilterBar();
-      applyFilters();
-      window._activateTab = activateTab;
-
-      if (data.generated_at) {
-        const gen = new Date(data.generated_at);
-        const now = new Date();
-        const genDate = new Date(gen.getFullYear(), gen.getMonth(), gen.getDate());
-        const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const diffDays = Math.round((nowDate - genDate) / 86400000);
-        const timeStr = gen.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-        let label;
-        if (diffDays === 0) label = `Today at ${timeStr}`;
-        else if (diffDays === 1) label = `Yesterday at ${timeStr}`;
-        else if (diffDays < 7) label = `${diffDays} days ago at ${timeStr}`;
-        else if (diffDays < 30) label = "Last week";
-        else label = "Last month";
-        footer.textContent = `Generated ${label}`;
-        const genAt = document.getElementById("generated-at");
-        if (genAt) genAt.textContent = `Generated ${label}`;
-
-        const mobileGenAt = document.getElementById("mobile-generated-at");
-        if (mobileGenAt) mobileGenAt.textContent = `Generated ${label}`;
-      }
-
-    } catch (err) {
-      errorMsg.classList.remove("hidden");
-      errorMsg.textContent = `Error loading report: ${err.message}`;
-      subtitle.textContent = "—";
-    }
-  }
-
-  loadReport();
-</script>
-<script>
-  document.addEventListener('click', function(e) {
-    const colTip = e.target.closest('.col-tip');
-    const active = document.querySelectorAll('.col-tip.active');
-    if (colTip) {
-      const wasActive = colTip.classList.contains('active');
-      active.forEach(el => el.classList.remove('active'));
-      if (!wasActive) colTip.classList.add('active');
-    } else {
-      active.forEach(el => el.classList.remove('active'));
-    }
+  // Counts per tab (after drawer filters)
+  const tabCounts = {
+    settled: allRows.length,
+    won:     allRows.filter(r => r._status === "won").length,
+    lost:    allRows.filter(r => r._status === "lost").length,
+  };
+
+  // Update status tab styles + counts
+  document.querySelectorAll(".hist-status-btn").forEach(btn => {
+    const isActive = btn.dataset.status === histStatusFilter;
+    btn.className = isActive
+      ? "hist-status-btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400"
+      : "hist-status-btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors bg-white border border-gray-200 text-gray-600 dark:bg-gray-900 dark:border-gray-800 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700";
+    const label = { settled: "Settled", won: "Won", lost: "Lost" }[btn.dataset.status];
+    const n = tabCounts[btn.dataset.status] ?? 0;
+    btn.innerHTML = `${label} <span class="text-xs opacity-60">(${n})</span>`;
   });
+  const visible = histStatusFilter === "settled" ? allRows
+                : allRows.filter(r => r._status === histStatusFilter);
+
+  updateStatsGrid(visible);
+
+  // Sort by kickoff descending (shared for both views)
+  const sorted = [...visible].sort((a, b) => (a.kickoff < b.kickoff ? 1 : -1));
+
+  // ── Mobile: card layout ───────────────────────────────────────
+  const container = document.getElementById("hist-cards-container");
+  if (sorted.length === 0) {
+    container.innerHTML = `<p class="text-center text-gray-400 py-12 whitespace-normal">No history yet.</p>`;
+  } else {
+    const matches = groupHistoryIntoMatches(sorted);
+    const byDate = new Map();
+    for (const m of matches) {
+      const d = fmtDate(m.kickoff);
+      if (!byDate.has(d)) byDate.set(d, []);
+      byDate.get(d).push(m);
+    }
+    let html = "";
+    for (const [dateLabel, dayMatches] of byDate) {
+      html += `<h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mt-6 mb-3 first:mt-0">${dateLabel}</h2>`;
+      html += `<div class="grid gap-4">`;
+      html += dayMatches.map(m => renderCard(m, { showResult: true })).join("");
+      html += `</div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  // ── Desktop: table layout ─────────────────────────────────────
+  const thead = document.getElementById("hist-thead");
+  thead.innerHTML = "<tr>" + HIST_COLS.map(c => {
+    const sk = c.sortKey||c.key;
+    const isActive = sk===histSortCol;
+    const icon = isActive?(histSortDir==="desc"?"▼":"▲"):"⇕";
+    const dirCls = isActive?`sort-${histSortDir}`:"";
+    const align = c.align==="right"?"text-right":c.align==="center"?"text-center":"text-left";
+    return `<th class="sortable px-4 py-3 ${align} ${dirCls}" data-col="${sk}">${esc(c.label)}<span class="sort-icon">${icon}</span></th>`;
+  }).join("") + "</tr>";
+  thead.querySelectorAll("th.sortable").forEach(th => {
+    th.addEventListener("click", () => {
+      const col = th.dataset.col;
+      if (histSortCol===col) histSortDir = histSortDir==="desc"?"asc":"desc";
+      else { histSortCol=col; histSortDir="desc"; }
+      renderHistory();
+    });
+  });
+
+  const tbody = document.getElementById("hist-tbody");
+  if (sorted.length === 0) {
+    tbody.innerHTML=`<tr><td colspan="${HIST_COLS.length}" class="px-4 py-10 text-center text-gray-400 whitespace-normal">No history yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sorted.map((r,i) => {
+    const bg = i%2===0?"":"bg-gray-50 dark:bg-gray-800/40";
+    const matchKey = `${r.kickoff}|${r.home_team}|${r.away_team}`;
+    const prevMatchKey = i > 0 ? `${sorted[i-1].kickoff}|${sorted[i-1].home_team}|${sorted[i-1].away_team}` : null;
+    const isRepeat = matchKey === prevMatchKey;
+    const cells = HIST_COLS.map(c => {
+      const align = c.align==="right"?"text-right":c.align==="center"?"text-center":"";
+      const content = (c.key === "home_team" && isRepeat) ? "" : c.render(r);
+      return `<td class="px-4 py-1.5 ${align}">${content}</td>`;
+    }).join("");
+    return `<tr class="${bg} hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">${cells}</tr>`;
+  }).join("");
+}
+
+// ── Filter drawer ──────────────────────────────────────────────
+function openDrawer() {
+  document.getElementById("filter-drawer").classList.add("open");
+  document.getElementById("filter-backdrop").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeDrawer() {
+  document.getElementById("filter-drawer").classList.remove("open");
+  document.getElementById("filter-backdrop").classList.remove("open");
+  document.body.style.overflow = "";
+}
+function updateFilterUI() {
+  // ── Count active filters ──────────────────────────────────────
+  const active = [];
+  if (activeLeague !== "all") {
+    const row = [...betsData, ...histData].find(r => r.league_key === activeLeague);
+    active.push({ key: "league", label: row ? row.league_name : activeLeague });
+  }
+  if (activeBetType !== "all") {
+    const bt = BET_TYPES.find(t => t.key === activeBetType);
+    active.push({ key: "bettype", label: bt ? bt.label : activeBetType });
+  }
+  if (teamSearch) {
+    active.push({ key: "team", label: `"${teamSearch}"` });
+  }
+  const count = active.length;
+
+  // ── Badge ─────────────────────────────────────────────────────
+  const badge = document.getElementById("filter-badge");
+  if (count > 0) { badge.textContent = count; badge.classList.remove("hidden"); }
+  else           { badge.classList.add("hidden"); }
+
+  // ── Clear button ──────────────────────────────────────────────
+  const clearBtn = document.getElementById("clear-filters-btn");
+  clearBtn.disabled = count === 0;
+
+  // ── Chips ─────────────────────────────────────────────────────
+  document.getElementById("active-filter-chips").innerHTML = active.map(f =>
+    `<span class="px-2 py-0.5 rounded-full border border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs font-medium">${esc(f.label)}</span>`
+  ).join("");
+}
+// Keep old name as alias so existing callers don't break
+const updateFilterBadge = updateFilterUI;
+
+// ── Main tab switching ─────────────────────────────────────────
+function setMainTab(tab) {
+  mainTab = tab;
+  document.getElementById("panel-bets").classList.toggle("hidden", tab!=="bets");
+  document.getElementById("panel-history").classList.toggle("hidden", tab!=="history");
+  document.querySelectorAll(".main-tab-btn").forEach(btn => {
+    const isActive = btn.dataset.main===tab;
+    const base = btn.closest("nav")
+      ? "main-tab-btn px-3 py-1.5 text-sm font-medium rounded-lg border-b-2 transition-colors"
+      : "main-tab-btn px-4 py-2 text-sm font-medium border-b-2 transition-colors";
+    btn.className = [
+      base,
+      isActive ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
+               : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400",
+    ].join(" ");
+  });
+  if (tab==="history") renderHistory();
+}
+
+// ── Loading / error ────────────────────────────────────────────
+function showLoading() {
+  document.getElementById("cards-container").innerHTML = `
+    <div class="flex flex-col items-center gap-3 py-16">
+      <span class="spinner"></span>
+      <span class="text-xs text-gray-400">Fetching from Supabase…</span>
+    </div>`;
+}
+function showError(msg) {
+  const el = document.getElementById("error-banner");
+  el.textContent = "Error: "+msg;
+  el.classList.remove("hidden");
+}
+
+// ── Fetch ──────────────────────────────────────────────────────
+async function fetchBets() {
+  const {data,error} = await sb.from("bet_history").select("*").eq("settled",false).order("kickoff",{ascending:true});
+  if (error) throw error;
+  return data;
+}
+async function fetchHistory() {
+  const {data,error} = await sb.from("bet_history").select("*").eq("settled",true).order("kickoff",{ascending:false});
+  if (error) throw error;
+  return data;
+}
+
+// ── Init ───────────────────────────────────────────────────────
+async function init() {
+  setMainTab("bets");
+  document.querySelectorAll(".main-tab-btn").forEach(btn =>
+    btn.addEventListener("click", () => setMainTab(btn.dataset.main))
+  );
+
+  document.querySelectorAll(".hist-status-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      histStatusFilter = btn.dataset.status;
+      histSortCol = "kickoff";
+      histSortDir = "desc";
+      renderHistory();
+    });
+  });
+
+  // Legend modal
+  const legendModal = document.getElementById("legend-modal");
+  document.getElementById("open-legend-btn").addEventListener("click", () => legendModal.classList.remove("hidden"));
+  document.getElementById("close-legend-btn").addEventListener("click", () => legendModal.classList.add("hidden"));
+  legendModal.addEventListener("click", e => { if (e.target === legendModal) legendModal.classList.add("hidden"); });
+
+  // Clear filters
+  document.getElementById("clear-filters-btn").addEventListener("click", () => {
+    activeLeague  = "all";
+    activeBetType = "all";
+    teamSearch    = "";
+    document.getElementById("team-search").value = "";
+    updateFilterUI();
+    renderBetsPanel();
+    renderHistory();
+  });
+
+  // Drawer open/close
+  document.getElementById("filters-toggle").addEventListener("click", openDrawer);
+  document.getElementById("drawer-close").addEventListener("click", closeDrawer);
+  document.getElementById("filter-backdrop").addEventListener("click", closeDrawer);
+
+  // Team search (now inside drawer)
+  document.getElementById("team-search").addEventListener("input", e => {
+    teamSearch = e.target.value.trim();
+    updateFilterBadge();
+    renderBetsPanel();
+    renderHistory();
+  });
+
+
+  showLoading();
+
+  try {
+    [betsData, histData] = await Promise.all([fetchBets(), fetchHistory()]);
+    const matchCount = groupIntoMatches(betsData).length;
+    const allRows = [...betsData, ...histData];
+    const latestRun = allRows.length
+      ? new Date(Math.max(...allRows.map(r => new Date(r.created_at))))
+      : new Date();
+    const lastUpdatedText = "Last updated " + relativeDate(latestRun);
+    document.getElementById("last-updated").textContent = lastUpdatedText;
+    document.getElementById("last-updated-mobile").textContent = lastUpdatedText;
+    renderBetsPanel();
+  } catch(err) {
+    showError(err.message||String(err));
+    document.getElementById("cards-container").innerHTML = "";
+  }
+}
+
+init();
 </script>
+
 </body>
 </html>
