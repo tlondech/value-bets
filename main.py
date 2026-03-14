@@ -363,7 +363,7 @@ def run_league_pipeline(
     stage_map: dict[str, str] = {}
     crest_map: dict[str, str] = {}
     rankings: dict[str, int] = {}
-    total_matchweeks: int | None = None
+    total_matchdays: int | None = None
     form_map: dict[str, list[str]] = {}
     odds_client = None
 
@@ -456,13 +456,13 @@ def run_league_pipeline(
     if league.fdo_enrich_code:
         standings = compute_standings(raw_fixtures)
         rankings = standings["rankings"]
-        total_matchweeks = standings["total_matchweeks"]
+        total_matchdays = standings["total_matchdays"]
         form_map = compute_form(raw_fixtures)
-        logger.debug("[%s] Standings computed: %d teams, total_matchweeks=%s.", league.key, len(rankings), total_matchweeks)
+        logger.debug("[%s] Standings computed: %d teams, total_matchdays=%s.", league.key, len(rankings), total_matchdays)
     # Augment stage labels with total matchweek count
-    if total_matchweeks:
+    if total_matchdays:
         stage_map = {
-            k: (f"{v} / {total_matchweeks}" if v.startswith("Matchweek ") else v)
+            k: (f"{v} / {total_matchdays}" if v.startswith("Matchday ") else v)
             for k, v in stage_map.items()
         }
 

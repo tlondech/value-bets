@@ -168,7 +168,7 @@ class FootballDataOrgClient:
                 # Unknown stage — pretty-print it
                 label = raw_stage.replace("_", " ").title()
             if not label and matchweek:
-                label = f"Matchweek {matchweek}"
+                label = f"Matchday {matchweek}"
             elif not label:
                 continue
 

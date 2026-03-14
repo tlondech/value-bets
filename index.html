@@ -411,9 +411,17 @@ function evClass(ev) {
   return "ev-success";
 }
 function evLabel(ev) {
-  const warn = ev >= 0.20 ? " ⚠" : "";
-  return `<span class="${evClass(ev)}">+${(ev*100).toFixed(1)}%${warn}</span>`;
+  return `<span class="${evClass(ev)}">+${(ev*100).toFixed(1)}%</span>`;
 }
+
+const LEAGUE_SHORT_NAMES = {
+  epl:        "EPL",
+  ucl:        "UCL",
+  laliga:     "La Liga",
+  bundesliga: "Bundesliga",
+  seriea:     "Serie A",
+  ligue1:     "Ligue 1",
+};
 
 const LEAGUE_COLORS = {
   epl:        "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
@@ -535,6 +543,15 @@ function renderCard(m, opts = {}) {
   const restWarn = days => (days != null && days < 4)
     ? `<span class="whitespace-nowrap shrink-0 inline-flex items-center gap-0.5 text-xs font-medium text-amber-500" title="Short rest: only ${days} day${days===1?'':'s'} since last match">⏱ ${days}d</span>` : "";
 
+  const shortLeagueName = LEAGUE_SHORT_NAMES[m.league_key] || m.league_name;
+  let shortStage = m.stage || "";
+  shortStage = shortStage
+    .replace("Matchday", "MD")
+    .replace("Round of 16", "R16")
+    .replace("Quarter-finals", "QF")
+    .replace("Semi-finals", "SF");
+  const badgeText = shortStage ? `${shortLeagueName} • ${shortStage}` : shortLeagueName;
+
   const showResult = !!opts.showResult;
   const score = showResult && m.actual_home_goals != null
     ? `<span class="text-sm font-bold tabular-nums">${m.actual_home_goals}–${m.actual_away_goals}</span>`
@@ -542,12 +559,12 @@ function renderCard(m, opts = {}) {
 
   const betsRows = m.bets.map(b => `
     <tr class="border-t border-gray-100 dark:border-gray-700/50">
-      <td class="py-1.5 pr-3">
+      <td class="py-1.5 pr-2">
         <span class="inline-block px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium">${esc(b.outcome_label)}</span>
       </td>
-      <td class="py-1.5 pr-3 text-right font-mono text-sm">${Number(b.odds).toFixed(2)}</td>
-      <td class="py-1.5 pr-3 text-right text-sm text-gray-500 dark:text-gray-400">${(b.true_prob*100).toFixed(1)}%</td>
-      <td class="py-1.5 ${showResult ? "pr-3" : ""} text-right text-sm font-semibold">${evLabel(b.ev)}</td>
+      <td class="py-1.5 pr-2 text-right font-mono text-sm">${Number(b.odds).toFixed(2)}</td>
+      <td class="py-1.5 pr-2 text-right text-sm text-gray-500 dark:text-gray-400">${(b.true_prob*100).toFixed(1)}%</td>
+      <td class="py-1.5 text-right text-sm font-semibold ${showResult ? "pr-2" : ""}">${evLabel(b.ev)}</td>
       ${showResult ? `<td class="py-1.5 text-right">${resultBadge(b.result)}</td>` : ""}
     </tr>`).join("");
 
@@ -556,7 +573,7 @@ function renderCard(m, opts = {}) {
     <!-- Card header -->
     <div class="flex items-start justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
       <div class="flex flex-wrap items-center gap-2 mr-3">
-        ${leagueBadge(m.league_key, m.stage ? m.league_name + ' • ' + m.stage : m.league_name)}
+        ${leagueBadge(m.league_key, badgeText)}
         ${m.is_second_leg ? `<span class="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded font-semibold whitespace-nowrap flex items-center gap-1">2nd Leg ${m.agg_home != null ? '<span class="opacity-70 font-normal">| Agg ' + m.agg_home + '–' + m.agg_away + '</span>' : ''}</span>` : ""}
         ${m.h2h_used ? `<span class="text-xs bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-1.5 rounded">H2H</span>` : ""}
       </div>
@@ -588,13 +605,13 @@ function renderCard(m, opts = {}) {
     </div>
     <!-- Bets table -->
     <div class="px-4 pb-3 mt-2 border-t border-gray-100 dark:border-gray-800 pt-3">
-      <table class="w-full text-sm">
+      <table class="w-full text-sm table-fixed">
         <thead>
           <tr class="text-xs text-gray-400 uppercase">
-            <th class="pb-1 text-left font-medium">Bet</th>
-            <th class="pb-1 text-right font-medium">Odds</th>
-            <th class="pb-1 text-right font-medium">Prob</th>
-            <th class="pb-1 text-right font-medium">EV</th>
+            <th class="w-[32%] pb-1 pr-2 text-left font-medium">Bet</th>
+            <th class="pb-1 pr-2 text-right font-medium">Odds</th>
+            <th class="pb-1 pr-2 text-right font-medium">Prob</th>
+            <th class="pb-1 text-right font-medium ${showResult ? "pr-2" : ""}">EV</th>
             ${showResult ? `<th class="pb-1 text-right font-medium">Result</th>` : ""}
           </tr>
         </thead>
@@ -618,7 +635,7 @@ function renderLeaguePills(matches) {
   </button>`;
   for (const [key, {name, n}] of Object.entries(counts)) {
     html += `<button class="league-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${activeLeague===key?active:inactive}" data-league="${esc(key)}">
-      ${esc(name)} <span class="ml-1 opacity-70">(${n})</span>
+      ${esc(LEAGUE_SHORT_NAMES[key] || name)} <span class="ml-1 opacity-70">(${n})</span>
     </button>`;
   }
   document.getElementById("league-pills").innerHTML = html;
@@ -790,7 +807,7 @@ document.addEventListener("click", e => {
 // ── History table ──────────────────────────────────────────────
 const HIST_COLS = [
   { key:"kickoff",      label:"Date",   render: r => `<span class="whitespace-nowrap">${esc(new Date(r.kickoff).toLocaleDateString("en-GB",{day:"numeric",month:"short"}))}</span>` },
-  { key:"league_name",  label:"League", render: r => `<span class="whitespace-nowrap">${leagueBadge(r.league_key, r.league_name)}</span>` },
+  { key:"league_name",  label:"League", render: r => `<span class="whitespace-nowrap">${leagueBadge(r.league_key, LEAGUE_SHORT_NAMES[r.league_key] || r.league_name)}</span>` },
   { key:"home_team",    label:"Match",  render: r => `<span class="whitespace-nowrap">${esc(r.home_team)} <span class="text-gray-400 mx-0.5">v</span> ${esc(r.away_team)}</span>` },
   { key:"outcome_label",label:"Bet",    render: r => `<span class="whitespace-nowrap px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium">${esc(r.outcome_label)}</span>` },
   { key:"odds",         label:"Odds",   render: r => `<span class="font-mono">${Number(r.odds).toFixed(2)}</span>`, align:"right" },
@@ -921,7 +938,7 @@ function updateFilterUI() {
   const active = [];
   if (activeLeague !== "all") {
     const row = [...betsData, ...histData].find(r => r.league_key === activeLeague);
-    active.push({ key: "league", label: row ? row.league_name : activeLeague });
+    active.push({ key: "league", label: LEAGUE_SHORT_NAMES[activeLeague] || (row ? row.league_name : activeLeague) });
   }
   if (activeBetType !== "all") {
     const bt = BET_TYPES.find(t => t.key === activeBetType);
