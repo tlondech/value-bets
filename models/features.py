@@ -104,7 +104,7 @@ def build_fixtures_dataframe(raw_fixtures: list[dict]) -> pd.DataFrame:
 def compute_standings(raw_fixtures: list[dict]) -> dict:
     """
     Derives league table from finished fixtures.
-    Returns {"rankings": {team_name: position}, "total_matchdays": int | None}.
+    Returns {"rankings": {team_name: position}, "total_matchweeks": int | None}.
     team_name matches the canonical names in raw_fixtures (home_team/away_team).
     """
     from collections import defaultdict
@@ -126,7 +126,7 @@ def compute_standings(raw_fixtures: list[dict]) -> dict:
             stats[h]["pts"] += 1; stats[a]["pts"] += 1
 
     n_teams = len(teams)
-    total_matchdays = (n_teams - 1) * 2 if n_teams > 1 else None
+    total_matchweeks = (n_teams - 1) * 2 if n_teams > 1 else None
 
     ranked = sorted(
         teams,
@@ -135,7 +135,7 @@ def compute_standings(raw_fixtures: list[dict]) -> dict:
     )
     return {
         "rankings": {team: pos + 1 for pos, team in enumerate(ranked)},
-        "total_matchdays": total_matchdays,
+        "total_matchweeks": total_matchweeks,
     }
 
 

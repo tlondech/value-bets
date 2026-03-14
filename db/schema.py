@@ -22,7 +22,7 @@ class Match(Base):
     match_date = Column(DateTime, nullable=False)
     league = Column(String, nullable=False)
     status = Column(String, default="upcoming")  # upcoming | finished
-    stage = Column(String, nullable=True)         # e.g. "Matchday 28", "Round of 16"
+    stage = Column(String, nullable=True)         # e.g. "Matchweek 28", "Round of 16"
     home_goals = Column(Integer, nullable=True)
     away_goals = Column(Integer, nullable=True)
 

@@ -94,8 +94,8 @@ class FootballDataOrgClient:
         return sorted(names)
 
     _STAGE_LABELS: dict[str, str] = {
-        "REGULAR_SEASON": "",        # use matchday
-        "LEAGUE_PHASE":   "",        # use matchday
+        "REGULAR_SEASON": "",        # use matchweek
+        "LEAGUE_PHASE":   "",        # use matchweek
         "GROUP_STAGE":    "Group Stage",
         "ROUND_OF_16":    "Round of 16",
         "LAST_16":        "Round of 16",
@@ -135,7 +135,7 @@ class FootballDataOrgClient:
         raw_stage_map: dict[str, str] = {}
         for m in data.get("matches", []):
             raw_stage = m.get("stage", "")
-            matchday = m.get("matchday")
+            matchweek = m.get("matchday")
             home_team = m.get("homeTeam") or {}
             away_team = m.get("awayTeam") or {}
 
@@ -167,8 +167,8 @@ class FootballDataOrgClient:
             if label is None:
                 # Unknown stage — pretty-print it
                 label = raw_stage.replace("_", " ").title()
-            if not label and matchday:
-                label = f"Matchday {matchday}"
+            if not label and matchweek:
+                label = f"Matchweek {matchweek}"
             elif not label:
                 continue
 

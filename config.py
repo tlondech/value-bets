@@ -29,7 +29,7 @@ class LeagueConfig:
     fd_code: str | None                # football-data.co.uk league code; None = not available
     season_override: int | None = None # set only for competitions with non-standard seasons
     fdo_code: str | None = None        # football-data.org competition code (e.g. "CL")
-    fdo_enrich_code: str | None = None # football-data.org code for matchday/stage enrichment
+    fdo_enrich_code: str | None = None # football-data.org code for matchweek/stage enrichment
 
 
 LEAGUES: list[LeagueConfig] = [
@@ -105,7 +105,7 @@ def load_config() -> Config:
     fdo_api_key = os.getenv("FOOTBALL_DATA_ORG_API_KEY", "")
     if any(lg.fdo_code or lg.fdo_enrich_code for lg in enabled) and not fdo_api_key:
         raise ValueError(
-            "FOOTBALL_DATA_ORG_API_KEY is required for Champions League and matchday enrichment.\n"
+            "FOOTBALL_DATA_ORG_API_KEY is required for Champions League and matchweek enrichment.\n"
             "Register free at https://www.football-data.org/ and add the key to .env"
         )
 

@@ -227,23 +227,22 @@ def load_raw_fixtures_from_db(session: Session, league_key: str, season: int) ->
 def build_leg2_map(
     upcoming_events: list[dict],
     raw_fixtures: list[dict],
-    raw_stage_map: dict[str, str],
     name_map: dict,
     league_key: str,
 ) -> dict[tuple, dict]:
     """
     Returns {(home_canonical, away_canonical): leg2_context} for UCL Leg 2 fixtures.
 
-    A match is Leg 2 when:
-      1. Its raw stage is in UCL_KNOCKOUT_STAGES
-      2. A finished fixture exists between the same two teams with reversed home/away roles
+    A match is Leg 2 when a finished fixture exists between the same two teams with
+    reversed home/away roles (i.e. Leg 1). No stage filter is applied — in the current
+    UCL league-phase format each team faces each opponent only once, so a reversed
+    finished fixture unambiguously signals a knockout second leg regardless of the
+    stage label returned by the API.
 
     Aggregate going into Leg 2:
       agg_home = leg1.away_goals  (Leg 2 home team was away in Leg 1)
       agg_away = leg1.home_goals  (Leg 2 away team was home in Leg 1)
     """
-    from config import UCL_KNOCKOUT_STAGES
-
     if league_key != "ucl":
         return {}
 
@@ -265,20 +264,9 @@ def build_leg2_map(
                 event["home_team"], event["away_team"], home_c, away_c,
             )
             continue
-        raw_stage = raw_stage_map.get(f"{home_c}|{away_c}", "")
-        if raw_stage not in UCL_KNOCKOUT_STAGES:
-            logger.debug(
-                "build_leg2_map: skipping %s vs %s — stage %r not in UCL_KNOCKOUT_STAGES (raw_stage_map has %d entries)",
-                home_c, away_c, raw_stage, len(raw_stage_map),
-            )
-            continue
         # Leg 2 home team was AWAY in Leg 1 → look for reversed fixture
         leg1 = finished_index.get((away_c, home_c))
         if leg1 is None:
-            logger.debug(
-                "build_leg2_map: skipping %s vs %s — leg 1 (%s vs %s) not found in finished_index (%d entries)",
-                home_c, away_c, away_c, home_c, len(finished_index),
-            )
             continue
         agg_home = leg1["away_goals"]   # Leg 2 home team's Leg 1 goals (scored as away)
         agg_away = leg1["home_goals"]   # Leg 2 away team's Leg 1 goals (scored as home)
@@ -374,9 +362,8 @@ def run_league_pipeline(
 
     stage_map: dict[str, str] = {}
     crest_map: dict[str, str] = {}
-    raw_stage_map: dict[str, str] = {}
     rankings: dict[str, int] = {}
-    total_matchdays: int | None = None
+    total_matchweeks: int | None = None
     form_map: dict[str, list[str]] = {}
     odds_client = None
 
@@ -397,12 +384,12 @@ def run_league_pipeline(
             logger.debug("[%s] No upcoming matches with Winamax odds — skipping.", league.key)
             return [], []
 
-        # Phase 1b: Fetch stage/matchday enrichment (non-fatal)
+        # Phase 1b: Fetch stage/matchweek enrichment (non-fatal)
         enrich_code = league.fdo_code or league.fdo_enrich_code
         if enrich_code and cfg.fdo_api_key:
             fdo_enrich = FootballDataOrgClient(enrich_code, season, cfg.fdo_api_key)
             try:
-                stage_map, crest_map, raw_stage_map = fdo_enrich.fetch_stage_map(name_map, league.key)
+                stage_map, crest_map, _ = fdo_enrich.fetch_stage_map(name_map, league.key)
                 logger.debug("[%s] Stage map: %d entries, %d crests.", league.key, len(stage_map), len(crest_map))
                 # Persist crests so no-force runs can use them
                 if crest_map:
@@ -461,7 +448,7 @@ def run_league_pipeline(
             return [], []
 
     # Build Leg 2 aggregate context map (UCL knockout only; no-op for all other leagues)
-    leg2_map = build_leg2_map(upcoming_events, raw_fixtures, raw_stage_map, name_map, league.key)
+    leg2_map = build_leg2_map(upcoming_events, raw_fixtures, name_map, league.key)
     if leg2_map:
         logger.info("[%s] Detected %d Leg 2 fixture(s).", league.display_name, len(leg2_map))
 
@@ -469,13 +456,13 @@ def run_league_pipeline(
     if league.fdo_enrich_code:
         standings = compute_standings(raw_fixtures)
         rankings = standings["rankings"]
-        total_matchdays = standings["total_matchdays"]
+        total_matchweeks = standings["total_matchweeks"]
         form_map = compute_form(raw_fixtures)
-        logger.debug("[%s] Standings computed: %d teams, total_matchdays=%s.", league.key, len(rankings), total_matchdays)
-    # Augment stage labels with total matchday count
-    if total_matchdays:
+        logger.debug("[%s] Standings computed: %d teams, total_matchweeks=%s.", league.key, len(rankings), total_matchweeks)
+    # Augment stage labels with total matchweek count
+    if total_matchweeks:
         stage_map = {
-            k: (f"{v} / {total_matchdays}" if v.startswith("Matchday ") else v)
+            k: (f"{v} / {total_matchweeks}" if v.startswith("Matchweek ") else v)
             for k, v in stage_map.items()
         }
 
@@ -650,6 +637,9 @@ def run_league_pipeline(
         quota if quota is not None else "—",
         skipped_note,
     )
+    # Tag fixtures with their league so settle_supabase_bets can canonicalize names
+    for f in raw_fixtures:
+        f["league_key"] = league.key
     return value_bets, raw_fixtures
 
 
@@ -712,7 +702,7 @@ def _get_supabase_client() -> Client:
     return create_client(url, key)
 
 
-def settle_supabase_bets(supabase: Client, all_raw_fixtures: list[dict]) -> int:
+def settle_supabase_bets(supabase: Client, all_raw_fixtures: list[dict], name_map: dict | None = None) -> int:
     """
     Settles bets directly against Supabase — works in CI where no local SQLite exists.
 
@@ -724,7 +714,7 @@ def settle_supabase_bets(supabase: Client, all_raw_fixtures: list[dict]) -> int:
     try:
         resp = (
             supabase.table("bet_history")
-            .select("kickoff,home_team,away_team,home_canonical,away_canonical,outcome")
+            .select("kickoff,home_team,away_team,home_canonical,away_canonical,league_key,outcome")
             .eq("settled", False)
             .lt("kickoff", now_iso)
             .execute()
@@ -738,15 +728,33 @@ def settle_supabase_bets(supabase: Client, all_raw_fixtures: list[dict]) -> int:
         logger.debug("No unsettled past bets found in Supabase.")
         return 0
 
-    # Index fixtures by (home_canonical, away_canonical) for O(1) lookup
+    # Build fixture index keyed by canonical names so it aligns with bet["home_canonical"].
+    # Each fixture is tagged with league_key by run_league_pipeline; resolve_team_name maps
+    # the raw CSV/API name to its canonical form. Falls back to raw name if unresolvable.
     fixture_index: dict[tuple, dict] = {}
     for f in all_raw_fixtures:
-        fixture_index[(f["home_team"], f["away_team"])] = f
+        lk = f.get("league_key", "")
+        if name_map and lk:
+            home_c = resolve_team_name(f["home_team"], name_map, lk) or f["home_team"]
+            away_c = resolve_team_name(f["away_team"], name_map, lk) or f["away_team"]
+        else:
+            home_c, away_c = f["home_team"], f["away_team"]
+        fixture_index[(home_c, away_c)] = f
 
     rows_to_update = []
     settled_at = datetime.now(timezone.utc).isoformat()
     for bet in unsettled:
-        fixture = fixture_index.get((bet["home_canonical"], bet["away_canonical"]))
+        # Use stored canonical; fall back to resolving home_team when canonical is null
+        home_key = bet.get("home_canonical")
+        away_key = bet.get("away_canonical")
+        if not home_key or not away_key:
+            lk = bet.get("league_key", "")
+            if name_map and lk:
+                home_key = resolve_team_name(bet.get("home_team", ""), name_map, lk) or bet.get("home_team")
+                away_key = resolve_team_name(bet.get("away_team", ""), name_map, lk) or bet.get("away_team")
+            else:
+                home_key, away_key = bet.get("home_team"), bet.get("away_team")
+        fixture = fixture_index.get((home_key, away_key))
         if fixture is None:
             continue
 
@@ -959,7 +967,7 @@ def run_pipeline(force: bool = False) -> None:
     )
 
     # Settle past bets against Supabase (works in CI — no local SQLite needed)
-    settle_supabase_bets(supabase, all_raw_fixtures)
+    settle_supabase_bets(supabase, all_raw_fixtures, name_map)
 
     # Persist today's recommendations to local SQLite (used by settle_bets)
     with Session(engine) as session:
