@@ -24,8 +24,8 @@ from sqlalchemy.orm import Session
 
 from config import load_config
 from db.schema import init_db
-from db.queries import save_bets_to_history
-from db.supabase import get_supabase_client, push_bets_to_supabase, settle_supabase_bets
+from db.queries import prune_stale_bets, save_bets_to_history
+from db.supabase import get_supabase_client, prune_stale_supabase_bets, push_bets_to_supabase, settle_supabase_bets
 from models.features import load_team_name_map
 from pipeline import _fetch_org_settlement_fixtures, _merge_settlement_fixtures, run_league_pipeline
 
@@ -100,14 +100,20 @@ def run_pipeline(force_fetch: bool = False) -> None:
     settlement_fixtures = _merge_settlement_fixtures(all_raw_fixtures, org_settle, name_map)
     settle_supabase_bets(supabase, settlement_fixtures, name_map)
 
+    processed_league_keys = {lg.key for lg in cfg.enabled_leagues}
+
     # Persist today's recommendations to local SQLite (used by settle_bets)
     with Session(engine) as session:
+        n_pruned = prune_stale_bets(session, all_value_bets, processed_league_keys)
         n_new = save_bets_to_history(session, all_value_bets, date.today().isoformat())
         session.commit()
+    if n_pruned:
+        logger.info("Pruned %d stale bet record(s) from local DB.", n_pruned)
     if n_new:
         logger.info("Saved %d new bet record(s) to local DB.", n_new)
 
     # Push today's value bets to Supabase
+    prune_stale_supabase_bets(supabase, all_value_bets, processed_league_keys)
     push_bets_to_supabase(supabase, all_value_bets, date.today().isoformat())
 
     webbrowser.open("http://localhost:8000")

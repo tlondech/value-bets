@@ -198,6 +198,44 @@ def load_all_fixtures_df(engine, universal_names: dict | None = None):
 # Bet history helpers
 # ---------------------------------------------------------------------------
 
+def prune_stale_bets(
+    session,
+    all_value_bets: list[dict],
+    processed_league_keys: set[str],
+) -> int:
+    """
+    Deletes unsettled future bets for processed leagues whose outcome is no
+    longer in the current recommended set (e.g. filtered by the ratio cap or
+    market-group deduplication). Scoped to processed leagues only so partial
+    runs don't wipe bets from leagues not evaluated this time.
+    """
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    current_keys: set[tuple] = set()
+    for m in all_value_bets:
+        kickoff_dt = datetime.fromisoformat(m["kickoff"]).replace(tzinfo=None)
+        for b in m["bets"]:
+            current_keys.add((kickoff_dt, m["home_team"], m["away_team"], b["outcome"]))
+
+    unsettled = (
+        session.query(BetHistory)
+        .filter(
+            BetHistory.settled == False,
+            BetHistory.kickoff > now,
+            BetHistory.league_key.in_(processed_league_keys),
+        )
+        .all()
+    )
+
+    pruned = 0
+    for bet in unsettled:
+        if (bet.kickoff, bet.home_team, bet.away_team, bet.outcome) not in current_keys:
+            session.delete(bet)
+            pruned += 1
+
+    return pruned
+
+
 def save_bets_to_history(session, match_bets_list: list[dict], recorded_date: str) -> int:
     """
     Persists each recommended bet in match_bets_list to bet_history.

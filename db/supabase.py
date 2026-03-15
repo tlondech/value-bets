@@ -137,6 +137,66 @@ def settle_supabase_bets(supabase: Client, all_raw_fixtures: list[dict], name_ma
     return count
 
 
+def prune_stale_supabase_bets(
+    supabase: Client,
+    all_value_bets: list[dict],
+    processed_league_keys: set[str],
+) -> int:
+    """
+    Deletes unsettled future bets from Supabase for processed leagues whose
+    outcome is no longer in the current recommended set.
+    """
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    try:
+        resp = (
+            supabase.table("bet_history")
+            .select("id,kickoff,home_team,away_team,outcome,league_key")
+            .eq("settled", False)
+            .gt("kickoff", now_iso)
+            .in_("league_key", list(processed_league_keys))
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("Failed to fetch unsettled bets for pruning: %s", exc)
+        return 0
+
+    existing: list[dict] = cast(list[dict], resp.data or [])
+    if not existing:
+        return 0
+
+    def _utc_prefix(iso: str) -> str:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc)
+        return dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+    current_keys: set[tuple] = set()
+    for m in all_value_bets:
+        kickoff_utc = _utc_prefix(m["kickoff"])
+        for b in m["bets"]:
+            current_keys.add((kickoff_utc, m["home_team"], m["away_team"], b["outcome"]))
+
+    stale_ids = [
+        row["id"]
+        for row in existing
+        if (_utc_prefix(row["kickoff"]), row["home_team"], row["away_team"], row["outcome"])
+        not in current_keys
+    ]
+
+    if not stale_ids:
+        return 0
+
+    try:
+        supabase.table("bet_history").delete().in_("id", stale_ids).execute()
+        logger.info("Pruned %d stale bet(s) from Supabase.", len(stale_ids))
+    except Exception as exc:
+        logger.error("Failed to prune stale bets from Supabase: %s", exc)
+        return 0
+
+    return len(stale_ids)
+
+
 def push_bets_to_supabase(
     supabase: Client,
     value_bets: list[dict],
