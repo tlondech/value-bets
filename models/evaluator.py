@@ -88,8 +88,18 @@ def evaluate_match(
     probs = calculate_match_probabilities(score_matrix)
     ou = calculate_over_under_probs(score_matrix)
 
-    home_ev = calculate_ev(probs["home_win"], home_odds)
-    away_ev = calculate_ev(probs["away_win"], away_odds)
+    # For draw-excluded (binary) markets, derive away prob as 1 - home so the
+    # two sides are guaranteed complementary and sum to exactly 1.0.
+    if draw_odds is None:
+        binary_total = probs["home_win"] + probs["away_win"]
+        home_prob = probs["home_win"] / binary_total if binary_total > 0 else 0.5
+        away_prob = 1.0 - home_prob
+    else:
+        home_prob = probs["home_win"]
+        away_prob = probs["away_win"]
+
+    home_ev = calculate_ev(home_prob, home_odds)
+    away_ev = calculate_ev(away_prob, away_odds)
     draw_ev = calculate_ev(probs["draw"], draw_odds) if draw_odds is not None else None
     over_2_5_ev  = calculate_ev(ou["over"],  over_2_5_odds)  if over_2_5_odds  is not None else None
     under_2_5_ev = calculate_ev(ou["under"], under_2_5_odds) if under_2_5_odds is not None else None
@@ -107,9 +117,9 @@ def evaluate_match(
         value_bets.append("under_2_5")
 
     return {
-        "home_win_prob":  probs["home_win"],
+        "home_win_prob":  home_prob,
         "draw_prob":      probs["draw"],
-        "away_win_prob":  probs["away_win"],
+        "away_win_prob":  away_prob,
         "over_2_5_prob":  ou["over"],
         "under_2_5_prob": ou["under"],
         "home_ev":        home_ev,

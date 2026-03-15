@@ -426,7 +426,28 @@ def run_league_pipeline(
                 "away_canonical": away_canonical,
                 "bets":          [],
             }
-        for outcome in result["value_bets"]:
+        # Within each market group, keep only the single highest-EV outcome so
+        # mutually exclusive outcomes are never both logged as bets.
+        # Also discard any outcome where the model disagrees with the market by
+        # more than max_prob_ratio (model_prob / implied_prob); UCL gets 1.4×
+        # to account for the aggregate-score adjustment signal.
+        _market_groups = [
+            {"home_win", "draw", "away_win"},
+            {"over_2_5", "under_2_5"},
+        ]
+        ratio_cap = 1.4 if league.key == "ucl" else cfg.max_prob_ratio
+        filtered_value_bets = []
+        for group in _market_groups:
+            candidates = [
+                o for o in result["value_bets"]
+                if o in group
+                and outcome_map[o][1] is not None
+                and outcome_map[o][0] * outcome_map[o][1] <= ratio_cap
+            ]
+            if candidates:
+                filtered_value_bets.append(max(candidates, key=lambda o: outcome_map[o][2]))
+
+        for outcome in filtered_value_bets:
             true_prob, odds, ev = outcome_map[outcome]
             if odds is None:
                 continue

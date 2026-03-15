@@ -66,6 +66,7 @@ class Config:
     ev_threshold: float = 0.05
     poisson_max_goals: int = 8
     rolling_window: int = 5
+    max_prob_ratio: float = 1.3        # max model_prob / implied_prob; UCL uses 1.4
 
     # Paths
     db_path: str = "data/bets.db"
