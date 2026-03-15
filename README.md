@@ -76,11 +76,8 @@ The workflow can also be triggered manually via `workflow_dispatch`.
 ## Usage
 
 ```bash
-# Normal run (skips API calls if already run today)
+# Normal run (uses cached data if already run today, auto-fetches on matchdays)
 python main.py
-
-# Force re-fetch odds and fixtures regardless of cache
-python main.py --force
 
 # Always fetch fresh data from external APIs (use in CI / scheduled runs)
 python main.py --fetch

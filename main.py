@@ -67,7 +67,7 @@ logger = logging.getLogger(__name__)
 # Main pipeline
 # ---------------------------------------------------------------------------
 
-def run_pipeline(force: bool = False) -> None:
+def run_pipeline(force_fetch: bool = False) -> None:
     t0 = time.monotonic()
     cfg = load_config()
     engine = init_db(cfg.db_path)
@@ -83,7 +83,7 @@ def run_pipeline(force: bool = False) -> None:
     all_value_bets: list[dict] = []
     all_raw_fixtures: list[dict] = []
     for league in cfg.enabled_leagues:
-        league_bets, raw_fixtures = run_league_pipeline(league, cfg, engine, name_map, force=force)
+        league_bets, raw_fixtures = run_league_pipeline(league, cfg, engine, name_map, force_fetch=force_fetch)
         all_value_bets.extend(league_bets)
         all_raw_fixtures.extend(raw_fixtures)
 
@@ -96,7 +96,7 @@ def run_pipeline(force: bool = False) -> None:
 
     # Settle past bets against Supabase (works in CI — no local SQLite needed)
     # Supplement .co.uk fixtures with near-real-time .org results for faster settlement.
-    org_settle = _fetch_org_settlement_fixtures(cfg.enabled_leagues, cfg, name_map) if force else []
+    org_settle = _fetch_org_settlement_fixtures(cfg.enabled_leagues, cfg, name_map) if force_fetch else []
     settlement_fixtures = _merge_settlement_fixtures(all_raw_fixtures, org_settle, name_map)
     settle_supabase_bets(supabase, settlement_fixtures, name_map)
 
@@ -115,7 +115,6 @@ def run_pipeline(force: bool = False) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Betting Recommendation Engine")
-    parser.add_argument("--force", action="store_true", help="Re-fetch even if already run today")
     parser.add_argument("--fetch", action="store_true", help="Always fetch fresh data from external APIs (use in CI / scheduled runs)")
     parser.add_argument("--debug", action="store_true", help="Enable DEBUG-level logging")
     args = parser.parse_args()
@@ -125,7 +124,7 @@ def main() -> None:
 
     logger.info("══ Betting Engine ══  %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     try:
-        run_pipeline(force=args.force or args.fetch)
+        run_pipeline(force_fetch=args.fetch)
     except Exception as e:
         logger.exception("Unhandled error in pipeline: %s", e)
         raise

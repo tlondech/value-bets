@@ -127,7 +127,7 @@ def run_league_pipeline(
     cfg,
     engine,
     name_map: dict,
-    force: bool = False,
+    force_fetch: bool = False,
 ) -> tuple[list[dict], list[dict]]:
     """
     Runs the full extraction → evaluation pipeline for one league.
@@ -151,7 +151,7 @@ def run_league_pipeline(
     odds_client = None
 
     # Auto-bypass cache when a match is scheduled today (fresh odds always needed)
-    if not force:
+    if not force_fetch:
         today_utc = datetime.now(timezone.utc).date()
         day_start = datetime.combine(today_utc, datetime.min.time())
         day_end   = datetime.combine(today_utc, datetime.max.time())
@@ -164,9 +164,9 @@ def run_league_pipeline(
             ).first()
         if match_today:
             logger.info("[%s] Match today detected — bypassing cache.", league.display_name)
-            force = True
+            force_fetch = True
 
-    if force:
+    if force_fetch:
         # Phase 1: Fetch odds from API
         odds_client = OddsAPIClient(
             api_key=cfg.odds_api_key,
@@ -257,7 +257,7 @@ def run_league_pipeline(
 
         if not raw_fixtures:
             logger.warning(
-                "[%s] No finished fixtures in DB — run with --force to fetch from API. Skipping.",
+                "[%s] No finished fixtures in DB — run with --fetch to fetch from API. Skipping.",
                 league.key,
             )
             return [], []
