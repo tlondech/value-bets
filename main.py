@@ -27,7 +27,10 @@ from constants import LOCAL_REPORT_URL
 from db.schema import init_db
 from db.queries import prune_stale_bets, save_bets_to_history
 from db.supabase import get_supabase_client, prune_stale_supabase_bets, push_bets_to_supabase, settle_supabase_bets
+from extractors.odds import fetch_active_tennis_leagues
+from extractors.tennis_data_client import TennisDataClient
 from models.features import load_team_name_map
+from models.tennis_model import compute_elo_ratings
 from pipeline import _fetch_org_settlement_fixtures, _merge_settlement_fixtures, run_league_pipeline
 
 # ---------------------------------------------------------------------------
@@ -74,10 +77,32 @@ def run_pipeline(force_fetch: bool = False, dry_run: bool = False) -> None:
     engine = init_db(cfg.db_path)
     name_map = load_team_name_map(cfg.team_map_path)
 
+    # Discover active tennis tournaments and pre-compute Elo ratings
+    tennis_leagues = fetch_active_tennis_leagues(cfg.odds_api_key)
+    if tennis_leagues:
+        cfg.enabled_leagues.extend(tennis_leagues)
+        logger.debug("Tennis: %d active tournament(s) discovered", len(tennis_leagues))
+        try:
+            current_year = datetime.now().year
+            years = list(range(current_year - 4, current_year + 1))
+            client = TennisDataClient()
+            cfg.atp_elo = compute_elo_ratings(client.fetch_atp_matches(years))
+            cfg.wta_elo = compute_elo_ratings(client.fetch_wta_matches(years))
+            logger.debug(
+                "Tennis Elo: %d ATP players, %d WTA players rated",
+                len(cfg.atp_elo), len(cfg.wta_elo),
+            )
+        except Exception as e:
+            logger.warning("Tennis Elo computation failed — tennis leagues will be skipped: %s", e)
+
     from config import LEAGUES as _ALL_LEAGUES
-    n_skipped_leagues = len(_ALL_LEAGUES) - len(cfg.enabled_leagues)
+    football_leagues = [lg for lg in cfg.enabled_leagues if lg.sport_type == "football"]
+    tennis_tournaments = [lg for lg in cfg.enabled_leagues if lg.sport_type == "tennis"]
+    n_skipped_leagues = len(_ALL_LEAGUES) - len(football_leagues)
     suffix = f"  (+ {n_skipped_leagues} skipped)" if n_skipped_leagues else ""
-    logger.info("Leagues: %s%s", ", ".join(lg.display_name for lg in cfg.enabled_leagues), suffix)
+    logger.info("Leagues: %s%s", ", ".join(lg.display_name for lg in football_leagues), suffix)
+    if tennis_tournaments:
+        logger.info("Tournaments: %s", ", ".join(lg.display_name for lg in tennis_tournaments))
 
     supabase = get_supabase_client()
 

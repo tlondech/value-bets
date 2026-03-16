@@ -131,24 +131,31 @@
 <!-- ── Action bar ───────────────────────────────────────────── -->
 <div class="bg-white dark:bg-[#0f172a] border-b border-gray-200 dark:border-gray-800 py-3">
   <div class="max-w-6xl mx-auto px-4 flex flex-col gap-3">
-    <div class="flex items-center gap-2 w-full md:w-1/2">
-      <input id="team-search" type="text" placeholder="Search team…"
-        class="flex-1 min-w-0 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-      <button id="filters-toggle"
-        class="relative shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M7 8h10M11 12h2M9 16h6"/>
-        </svg>
-        Filters
-        <span id="filter-badge" class="hidden absolute -top-1.5 -right-1.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold h-4 w-4 rounded-full leading-none"></span>
-      </button>
-      <button id="clear-filters-btn" disabled title="Clear all filters"
-        class="inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:border-gray-700 disabled:text-gray-400 border-blue-500 text-blue-500 hover:enabled:border-red-500 hover:enabled:text-red-400">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
-        Clear
-      </button>
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 w-full">
+      <!-- Left: Master Sport Toggle -->
+      <div id="sport-pills" class="w-full md:w-auto shrink-0"></div>
+      <!-- Right: Search + Filter controls -->
+      <div class="grid grid-cols-3 gap-2 w-full md:flex md:w-auto md:items-center md:gap-2">
+        <input id="team-search" type="text" placeholder="Search team…"
+          class="col-span-2 min-w-0 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 md:w-56" />
+        <div class="col-span-1 flex gap-1.5 w-full md:contents">
+          <button id="filters-toggle"
+            class="relative flex-1 md:flex-none justify-center inline-flex items-center gap-1.5 px-0 md:px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h18M7 8h10M11 12h2M9 16h6"/>
+            </svg>
+            <span class="hidden sm:inline">Filters</span>
+            <span id="filter-badge" class="hidden absolute -top-1.5 -right-1.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold h-4 w-4 rounded-full leading-none"></span>
+          </button>
+          <button id="clear-filters-btn" disabled title="Clear all filters"
+            class="flex-1 md:flex-none justify-center inline-flex items-center gap-1.5 px-0 md:px-3 py-1.5 rounded-lg border text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:border-gray-700 disabled:text-gray-400 border-blue-500 text-blue-500 hover:enabled:border-red-500 hover:enabled:text-red-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            <span class="hidden sm:inline">Clear</span>
+          </button>
+        </div>
+      </div>
     </div>
     <div id="active-filter-chips" class="flex flex-wrap items-center gap-2 empty:hidden"></div>
   </div>
@@ -380,6 +387,7 @@ let betsData      = [];
 let histData      = [];
 let activeLeague  = "all";
 let activeBetType = "all";
+let activeSport   = "football";
 let teamSearch    = "";
 let activeDateBets = "all";  // "all" | "today" | "tomorrow" | "week"
 let activeDateHist = "all";  // "all" | "7d" | "30d" | "3m"
@@ -474,6 +482,38 @@ function resultBadge(result) {
   return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">Pending</span>`;
 }
 
+// ── Master sport segmented control ─────────────────────────────
+const SPORTS = [
+  { key: "football",   label: "⚽️ Football" },
+  { key: "basketball", label: "🏀 Basketball" },
+  { key: "tennis",     label: "🎾 Tennis" },
+];
+function renderSportPills() {
+  document.getElementById("sport-pills").innerHTML = `
+    <div class="grid grid-cols-3 w-full md:w-auto rounded-lg border border-gray-300 dark:border-gray-700 overflow-hidden text-sm font-medium">
+      ${SPORTS.map((s, i) => {
+        const active = activeSport === s.key;
+        const border = i > 0 ? "border-l border-gray-300 dark:border-gray-700" : "";
+        const cls = active
+          ? "bg-indigo-600 text-white"
+          : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800";
+        return `<button class="sport-pill w-full inline-flex items-center justify-center whitespace-nowrap px-2 py-1.5 transition-colors ${border} ${cls}" data-sport="${s.key}">${s.label}</button>`;
+      }).join("")}
+    </div>`;
+  document.querySelectorAll(".sport-pill").forEach(btn => {
+    btn.addEventListener("click", () => {
+      activeSport   = btn.dataset.sport;
+      activeLeague  = "all";
+      activeBetType = "all";
+      teamSearch    = "";
+      document.getElementById("team-search").value = "";
+      updateFilterUI();
+      renderBetsPanel();
+      resetHistoryPagination();
+    });
+  });
+}
+
 // ── Group flat rows into matches ───────────────────────────────
 function groupIntoMatches(rows) {
   const map = new Map();
@@ -496,6 +536,8 @@ function groupIntoMatches(rows) {
         home_rest_days: row.home_rest_days,
         away_rest_days: row.away_rest_days,
         h2h_used:       row.h2h_used,
+        sport:          row.sport || "football",
+        handicap_line:  row.handicap_line ?? null,
 
         is_second_leg:  row.is_second_leg,
         agg_home:       row.agg_home,
@@ -538,6 +580,8 @@ function groupHistoryIntoMatches(rows) {
         home_rest_days:    row.home_rest_days,
         away_rest_days:    row.away_rest_days,
         h2h_used:          row.h2h_used,
+        sport:             row.sport || "football",
+        handicap_line:     row.handicap_line ?? null,
         is_second_leg:     row.is_second_leg,
         agg_home:          row.agg_home,
         agg_away:          row.agg_away,
@@ -593,26 +637,52 @@ function renderCard(m, opts = {}) {
   const restWarn = days => (days != null && days < 4)
     ? `<span class="whitespace-nowrap shrink-0 inline-flex items-center gap-0.5 text-xs font-medium text-amber-500" title="Short rest: only ${days} day${days===1?'':'s'} since last match">⏱ ${days}d</span>` : "";
 
-  const shortLeagueName = LEAGUE_SHORT_NAMES[m.league_key] || m.league_name;
-  let shortStage = m.stage || "";
-  const totalMD = LEAGUE_TOTAL_MATCHDAYS[m.league_key];
-  if (totalMD && /^Matchday \d+$/.test(shortStage)) shortStage += ` / ${totalMD}`;
-  shortStage = shortStage
-    .replace("Matchday", "MD")
-    .replace("Round of 16", "R16")
-    .replace("Quarter-finals", "QF")
-    .replace("Semi-finals", "SF");
-  const badgeText = shortStage ? `${shortLeagueName} • ${shortStage}` : shortLeagueName;
+  const isTennis     = m.sport === "tennis";
+  const isBasketball = m.sport === "basketball";
+
+  // ── League / tournament badge text ────────────────────────────
+  let badgeText;
+  if (isTennis) {
+    const surface = m.stage || "";
+    badgeText = surface ? `${esc(m.league_name)} • ${esc(surface)}` : esc(m.league_name);
+  } else {
+    const shortLeagueName = LEAGUE_SHORT_NAMES[m.league_key] || m.league_name;
+    let shortStage = m.stage || "";
+    const totalMD = LEAGUE_TOTAL_MATCHDAYS[m.league_key];
+    if (totalMD && /^Matchday \d+$/.test(shortStage)) shortStage += ` / ${totalMD}`;
+    shortStage = shortStage
+      .replace("Matchday", "MD")
+      .replace("Round of 16", "R16")
+      .replace("Quarter-finals", "QF")
+      .replace("Semi-finals", "SF");
+    badgeText = shortStage ? `${shortLeagueName} • ${shortStage}` : shortLeagueName;
+  }
 
   const showResult = !!opts.showResult;
-  const score = showResult && m.actual_home_goals != null
-    ? `<span class="text-sm font-bold tabular-nums">${m.actual_home_goals}–${m.actual_away_goals}</span>`
-    : "";
+
+  // ── Score display ──────────────────────────────────────────────
+  let score = "";
+  if (showResult && m.actual_home_goals != null) {
+    if (isTennis) {
+      score = `<span class="text-sm font-bold tabular-nums">${m.actual_home_goals}–${m.actual_away_goals} sets</span>`;
+    } else {
+      score = `<span class="text-sm font-bold tabular-nums">${m.actual_home_goals}–${m.actual_away_goals}</span>`;
+    }
+  }
+
+  // ── Bet label: append handicap line for basketball ─────────────
+  const betLabel = b => {
+    if (isBasketball && m.handicap_line != null) {
+      const sign = m.handicap_line > 0 ? "+" : "";
+      return `${esc(b.outcome_label)} (${sign}${m.handicap_line})`;
+    }
+    return esc(b.outcome_label);
+  };
 
   const betsRows = m.bets.map(b => `
     <tr class="border-t border-gray-100 dark:border-gray-700/50">
       <td class="py-1.5 pr-2">
-        <span class="inline-block px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium">${esc(b.outcome_label)}</span>
+        <span class="inline-block px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium">${betLabel(b)}</span>
       </td>
       <td class="py-1.5 pr-2 text-right font-mono text-sm">${Number(b.odds).toFixed(2)}</td>
       <td class="py-1.5 pr-2 text-right text-sm text-gray-500 dark:text-gray-400">${(b.true_prob*100).toFixed(1)}%</td>
@@ -644,7 +714,7 @@ function renderCard(m, opts = {}) {
         </div>
         <div class="flex items-center gap-2.5 shrink-0">
           ${rankStr(m.home_rank)}
-          <div class="flex gap-1">${formBubbles(m.home_form)}</div>
+          ${isTennis ? "" : `<div class="flex gap-1">${formBubbles(m.home_form)}</div>`}
         </div>
       </div>
       <div class="flex items-center justify-between gap-2">
@@ -655,7 +725,7 @@ function renderCard(m, opts = {}) {
         </div>
         <div class="flex items-center gap-2.5 shrink-0">
           ${rankStr(m.away_rank)}
-          <div class="flex gap-1">${formBubbles(m.away_form)}</div>
+          ${isTennis ? "" : `<div class="flex gap-1">${formBubbles(m.away_form)}</div>`}
         </div>
       </div>
     </div>
@@ -732,19 +802,32 @@ function renderDatePills() {
 }
 
 // ── Render bet-type pills ──────────────────────────────────────
-const BET_TYPES = [
-  {key:"all",     label:"All Types"},
-  {key:"home_win",label:"Home Win"},
-  {key:"draw",    label:"Draw"},
-  {key:"away_win",label:"Away Win"},
-  {key:"over_2_5",label:"Over 2.5"},
-  {key:"under_2_5",label:"Under 2.5"},
-
-];
+const BET_TYPES = {
+  football: [
+    {key:"all",      label:"All Types"},
+    {key:"home_win", label:"Home Win"},
+    {key:"draw",     label:"Draw"},
+    {key:"away_win", label:"Away Win"},
+    {key:"over_2_5", label:"Over 2.5"},
+    {key:"under_2_5",label:"Under 2.5"},
+  ],
+  basketball: [
+    {key:"all",        label:"All Types"},
+    {key:"spread_home",label:"Spread (Home)"},
+    {key:"spread_away",label:"Spread (Away)"},
+    {key:"moneyline_home", label:"Moneyline Home"},
+    {key:"moneyline_away", label:"Moneyline Away"},
+  ],
+  tennis: [
+    {key:"all",          label:"All Types"},
+    {key:"match_winner", label:"Match Winner"},
+  ],
+};
 function renderBetTypePills() {
-  const active  = "bg-indigo-600 text-white";
+  const types    = BET_TYPES[activeSport] || BET_TYPES.football;
+  const active   = "bg-indigo-600 text-white";
   const inactive = "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400";
-  document.getElementById("bet-type-pills").innerHTML = BET_TYPES.map(t =>
+  document.getElementById("bet-type-pills").innerHTML = types.map(t =>
     `<button class="bet-type-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${activeBetType===t.key?active:inactive}" data-type="${t.key}">${t.label}</button>`
   ).join("");
   document.querySelectorAll(".bet-type-pill").forEach(btn => {
@@ -754,7 +837,8 @@ function renderBetTypePills() {
 
 // ── Filter + render cards ──────────────────────────────────────
 function renderBetsPanel() {
-  const allMatches = groupIntoMatches(betsData);
+  const allMatches = groupIntoMatches(betsData).filter(m => m.sport === activeSport);
+  renderSportPills();
   renderLeaguePills(allMatches);
   renderBetTypePills();
   renderDatePills();
@@ -1133,6 +1217,7 @@ async function fetchHistoryPage(page = 0) {
     .eq("settled", true)
     .order("kickoff", { ascending: false })
     .range(from, to);
+  q = q.eq("sport", activeSport);
   if (activeLeague  !== "all") q = q.eq("league_key", activeLeague);
   if (activeBetType !== "all") q = q.eq("outcome",    activeBetType);
   if (teamSearch)               q = q.or(`home_team.ilike.%${teamSearch}%,away_team.ilike.%${teamSearch}%`);

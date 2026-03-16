@@ -5,6 +5,9 @@ import requests
 
 from constants import ODDS_API_QUOTA_CRITICAL, ODDS_API_TIMEOUT, TOTALS_LINE_TOLERANCE
 
+# Imported lazily inside fetch_active_tennis_leagues to avoid circular imports
+# (config imports from constants; odds is imported by config indirectly)
+
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://api.the-odds-api.com"
@@ -173,3 +176,42 @@ class OddsAPIClient:
             "bookmaker": primary_bk["key"],
         }
 
+
+def fetch_active_tennis_leagues(api_key: str) -> list:
+    """
+    Fetches currently active ATP/WTA sport keys from The Odds API /v4/sports
+    and returns a list of LeagueConfig objects ready to be added to cfg.enabled_leagues.
+
+    Only currently active tournaments are returned (all=false filters out inactive sports).
+    """
+    from config import LeagueConfig  # local import to avoid circular dependency
+
+    url = f"{BASE_URL}/v4/sports"
+    try:
+        response = requests.get(
+            url,
+            params={"apiKey": api_key, "all": "false"},
+            timeout=ODDS_API_TIMEOUT,
+        )
+    except Exception as e:
+        logger.warning("Could not fetch active tennis leagues: %s", e)
+        return []
+
+    if not response.ok:
+        logger.warning("fetch_active_tennis_leagues: HTTP %d", response.status_code)
+        return []
+
+    leagues = []
+    for sport in response.json():
+        key = sport["key"]
+        if key.startswith("tennis_atp_") or key.startswith("tennis_wta_"):
+            leagues.append(LeagueConfig(
+                key=key,
+                display_name=sport["title"],
+                odds_sport=key,
+                fd_code=None,
+                sport_type="tennis",
+            ))
+
+    logger.debug("fetch_active_tennis_leagues: %d tournament(s) found", len(leagues))
+    return leagues

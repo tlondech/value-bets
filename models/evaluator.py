@@ -1,8 +1,7 @@
 import numpy as np
 from scipy.stats import poisson
 
-from constants import DIXON_COLES_RHO_FLOOR
-
+from constants import DIXON_COLES_RHO_FLOOR, EV_THRESHOLD
 
 def build_score_matrix(
     home_lambda: float,
@@ -61,7 +60,6 @@ def calculate_over_under_probs(score_matrix: np.ndarray, line: float = 2.5) -> d
     return {"over": over, "under": 1.0 - over}
 
 
-
 def calculate_ev(true_probability: float, decimal_odds: float) -> float:
     """
     EV = (true_probability * decimal_odds) - 1
@@ -76,7 +74,7 @@ def evaluate_match(
     home_odds: float,
     draw_odds: float | None,
     away_odds: float,
-    ev_threshold: float = 0.05,
+    ev_threshold: float = EV_THRESHOLD,
     max_goals: int = 8,
     over_2_5_odds: float | None = None,
     under_2_5_odds: float | None = None,

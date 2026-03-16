@@ -62,13 +62,37 @@ def fetch_league_data(
         )
         upcoming_events = odds_client.fetch_upcoming_odds()
 
+        # Tennis leagues: no fixture history needed — return early after odds fetch
+        if league.sport_type == "tennis":
+            if dry_run:
+                if not upcoming_events:
+                    logger.info(
+                        "[DRY-RUN] %-20s  sport=%-35s  → no upcoming matches on Winamax",
+                        league.display_name, league.odds_sport,
+                    )
+                else:
+                    logger.info(
+                        "[DRY-RUN] %-20s  sport=%-35s  → %d match(es) found on Winamax",
+                        league.display_name, league.odds_sport, len(upcoming_events),
+                    )
+                    for ev in upcoming_events:
+                        logger.info("    · %s vs %s  (%s)", ev["home_team"], ev["away_team"], ev["commence_time"].date())
+                return [], [], {}, {}, odds_client
+            return upcoming_events, [], {}, {}, odds_client
+
         if dry_run:
             if not upcoming_events:
-                logger.info("[DRY-RUN] %-15s  → no upcoming matches on Winamax", league.key)
+                logger.info(
+                    "[DRY-RUN] %-20s  sport=%-35s  → no upcoming matches on Winamax",
+                    league.display_name, league.odds_sport,
+                )
             else:
-                logger.info("[DRY-RUN] %-15s  → %d match(es) found", league.key, len(upcoming_events))
+                logger.info(
+                    "[DRY-RUN] %-20s  sport=%-35s  → %d match(es) found on Winamax",
+                    league.display_name, league.odds_sport, len(upcoming_events),
+                )
                 for ev in upcoming_events:
-                    logger.info("    · %s vs %s  (%s)", ev["home_team"], ev["away_team"], ev["commence_time"][:10])
+                    logger.info("    · %s vs %s  (%s)", ev["home_team"], ev["away_team"], ev["commence_time"].date())
             return [], [], {}, {}, odds_client
 
         if not upcoming_events:

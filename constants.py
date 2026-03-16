@@ -98,6 +98,9 @@ LAMBDA_MAX = 6.0
 # EV evaluation & bet filtering
 # ---------------------------------------------------------------------------
 
+# Minimum EV required to flag a bet as value
+EV_THRESHOLD = 0.05
+
 # Probability-ratio cap for UCL matches (looser than the default to allow for
 # higher variance in knockout football)
 UCL_PROB_RATIO_CAP = 1.4

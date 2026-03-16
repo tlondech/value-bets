@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from dotenv import load_dotenv
 
+from constants import EV_THRESHOLD
+
 load_dotenv()
 
 
@@ -30,6 +32,7 @@ class LeagueConfig:
     season_override: int | None = None # set only for competitions with non-standard seasons
     fdo_code: str | None = None        # football-data.org competition code (e.g. "CL")
     fdo_enrich_code: str | None = None # football-data.org code for matchweek/stage enrichment
+    sport_type: str = "football"       # "football" | "tennis"
 
 
 LEAGUES: list[LeagueConfig] = [
@@ -62,6 +65,9 @@ class Config:
     odds_format: str = "decimal"
     odds_totals_bookmakers: str = ""   # extra bookmakers for O/U 2.5 fallback (e.g. "pinnacle")
 
+    # Tennis Elo ratings — computed once per run in main.py and shared across all tennis leagues
+    atp_elo: dict = field(default_factory=dict)
+    wta_elo: dict = field(default_factory=dict)
 
     # Model settings
     ev_threshold: float = 0.05
@@ -116,7 +122,7 @@ def load_config() -> Config:
         fdo_api_key=fdo_api_key,
         news_api_key=os.getenv("NEWS_API_KEY", ""),
         enabled_leagues=enabled,
-        ev_threshold=float(os.getenv("EV_THRESHOLD", "0.05")),
+        ev_threshold=float(os.getenv("EV_THRESHOLD", str(EV_THRESHOLD))),
         rolling_window=int(os.getenv("ROLLING_WINDOW", "5")),
         poisson_max_goals=int(os.getenv("POISSON_MAX_GOALS", "8")),
         odds_totals_bookmakers=os.getenv("ODDS_TOTALS_BOOKMAKERS", ""),
