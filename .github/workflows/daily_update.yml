@@ -35,6 +35,7 @@ jobs:
           FOOTBALL_DATA_ORG_API_KEY: ${{ secrets.FOOTBALL_DATA_ORG_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
           ENABLED_LEAGUES: ${{ vars.ENABLED_LEAGUES || '' }}
           EV_THRESHOLD: ${{ vars.EV_THRESHOLD || '0.05' }}
           ROLLING_WINDOW: ${{ vars.ROLLING_WINDOW || '5' }}

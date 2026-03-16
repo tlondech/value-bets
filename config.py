@@ -50,6 +50,7 @@ class Config:
     # API credentials
     odds_api_key: str
     fdo_api_key: str = ""              # football-data.org key; required if any fdo_code league is enabled
+    news_api_key: str = ""             # NewsAPI key; optional — enables team news context for EV ≥ 20% bets
 
     # Leagues to process in this run
     enabled_leagues: list[LeagueConfig] = field(default_factory=lambda: list(LEAGUES))
@@ -113,6 +114,7 @@ def load_config() -> Config:
     return Config(
         odds_api_key=os.environ["THE_ODDS_API_KEY"],
         fdo_api_key=fdo_api_key,
+        news_api_key=os.getenv("NEWS_API_KEY", ""),
         enabled_leagues=enabled,
         ev_threshold=float(os.getenv("EV_THRESHOLD", "0.05")),
         rolling_window=int(os.getenv("ROLLING_WINDOW", "5")),
