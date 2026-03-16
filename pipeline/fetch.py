@@ -37,7 +37,7 @@ def fetch_league_data(
     force_fetch: bool,
     season: int,
     dry_run: bool = False,
-) -> tuple[list[dict], list[dict], dict[str, str], dict[str, str], object | None]:
+) -> tuple[list[dict], list[dict], dict[str, str], dict[str, str], OddsAPIClient | None]:
     """
     Fetches or loads data for one league.
 

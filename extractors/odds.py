@@ -114,11 +114,14 @@ class OddsAPIClient:
 
         # Build a lookup by bookmaker key; primary bookmaker must be present for h2h
         bk_map = {bk["key"]: bk for bk in bookmakers}
-        primary_bk = bk_map.get(self.bookmaker) or bookmakers[0]
+        primary_bk = bk_map.get(self.bookmaker)
+        if not primary_bk:
+            logger.debug("Skipping %s vs %s — no odds from %s", home_team, away_team, self.bookmaker)
+            return None
         markets = {m["key"]: m for m in primary_bk.get("markets", [])}
         h2h = markets.get("h2h")
         if not h2h:
-            logger.warning("No h2h market for match %s", match_id)
+            logger.debug("Skipping %s vs %s — no h2h market from %s", home_team, away_team, self.bookmaker)
             return None
 
         # outcomes list is UNORDERED — match by name, never by index

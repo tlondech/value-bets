@@ -4,7 +4,7 @@ Supabase client and remote persistence operations.
 
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import cast
 
 from supabase import create_client, Client
@@ -15,6 +15,70 @@ from models.features import resolve_team_name
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Pure stateless helpers
+# ---------------------------------------------------------------------------
+
+def _utc_prefix(iso: str) -> str:
+    """Normalises an ISO-8601 timestamp to a UTC second-precision string for keying."""
+    dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc)
+    return dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def _last_name(name: str) -> str:
+    """Last word of a player name, lowercased — used as a loose match key."""
+    return name.strip().split()[-1].lower() if name.strip() else ""
+
+
+# ---------------------------------------------------------------------------
+# Supabase-coupled private helpers
+# ---------------------------------------------------------------------------
+
+_SETTLE_KEYS = frozenset({
+    "settled", "result", "settled_at", "actual_home_goals", "actual_away_goals"
+})
+
+
+def _write_settled_bets(supabase: Client, rows: list[dict], sport: str) -> int:
+    """
+    Persists evaluated settlement rows to bet_history.
+
+    Includes only keys present in the row (football rows carry actual_home_goals /
+    actual_away_goals; tennis rows do not — the key-filter handles both without branching).
+    Returns the number of rows successfully written.
+    """
+    count = 0
+    for row in rows:
+        payload = {k: row[k] for k in _SETTLE_KEYS if k in row}
+        try:
+            (
+                supabase.table("bet_history")
+                .update(payload)
+                .eq("kickoff",   row["kickoff"])
+                .eq("home_team", row["home_team"])
+                .eq("away_team", row["away_team"])
+                .eq("outcome",   row["outcome"])
+                .execute()
+            )
+            count += 1
+        except Exception as exc:
+            logger.error(
+                "Failed to settle %s bet %s vs %s (%s) @ %s: %s",
+                sport, row["home_team"], row["away_team"],
+                row["outcome"], row["kickoff"], exc,
+            )
+    if count:
+        logger.info("Settled %d %s bet(s).", count, sport)
+    return count
+
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def get_supabase_client() -> Client:
     """Creates a Supabase client from environment variables."""
@@ -41,7 +105,7 @@ def settle_supabase_bets(supabase: Client, all_raw_fixtures: list[dict], name_ma
             supabase.table("bet_history")
             .select("kickoff,home_team,away_team,home_canonical,away_canonical,league_key,outcome")
             .eq("settled", False)
-            .neq("sport", "tennis")  # tennis settled separately via settle_tennis_supabase_bets
+            .eq("sport", "football")
             .lt("kickoff", now_iso)
             .execute()
         )
@@ -119,25 +183,88 @@ def settle_supabase_bets(supabase: Client, all_raw_fixtures: list[dict], name_ma
         logger.debug("No fixture matches found for unsettled bets.")
         return 0
 
-    count = 0
-    for row in rows_to_update:
-        try:
-            supabase.table("bet_history").update({
-                "settled":           row["settled"],
-                "result":            row["result"],
-                "actual_home_goals": row["actual_home_goals"],
-                "actual_away_goals": row["actual_away_goals"],
-                "settled_at":        row["settled_at"],
-            }).eq("kickoff", row["kickoff"]).eq("home_team", row["home_team"]).eq("away_team", row["away_team"]).eq("outcome", row["outcome"]).execute()
-            count += 1
-        except Exception as exc:
-            logger.error(
-                "Failed to settle bet %s vs %s (%s) @ %s: %s",
-                row["home_team"], row["away_team"], row["outcome"], row["kickoff"], exc,
-            )
-    if count:
-        logger.info("Settled %d bet(s) via Supabase.", count)
-    return count
+    return _write_settled_bets(supabase, rows_to_update, "football via Supabase")
+
+
+def settle_tennis_supabase_bets(supabase: Client, active_tennis_league_keys: list[str]) -> int:
+    """
+    Settles unsettled tennis bets in Supabase using tennis-data.co.uk CSV results.
+
+    For each active tennis league, fetches completed match results and matches them
+    against unsettled bets by player name and date proximity.
+    """
+    now_iso = datetime.now(timezone.utc).isoformat()
+    year    = datetime.now(timezone.utc).year
+
+    try:
+        resp = (
+            supabase.table("bet_history")
+            .select("id,kickoff,home_team,away_team,outcome,league_key")
+            .eq("settled", False)
+            .eq("sport", "tennis")
+            .lt("kickoff", now_iso)
+            .execute()
+        )
+    except Exception as exc:
+        logger.error("Failed to fetch unsettled tennis bets: %s", exc)
+        return 0
+
+    unsettled = cast(list[dict], resp.data or [])
+    if not unsettled:
+        logger.debug("No unsettled past tennis bets found.")
+        return 0
+
+    # Build results index per league key: {(winner_last, loser_last, date_str): full_result}
+    results_by_league: dict[str, list[dict]] = {}
+    for lk in active_tennis_league_keys:
+        results_by_league[lk] = fetch_tennis_results(lk, year)
+
+    rows_to_update = []
+    settled_at = datetime.now(timezone.utc).isoformat()
+
+    for bet in unsettled:
+        lk      = bet.get("league_key", "")
+        results = results_by_league.get(lk, [])
+        if not results:
+            continue
+
+        kickoff_dt = datetime.fromisoformat(bet["kickoff"].replace("Z", "+00:00"))
+        home = bet["home_team"]
+        away = bet["away_team"]
+
+        matched = None
+        for r in results:
+            # Date guard: within ±2 days (tennis matches sometimes span midnight)
+            if abs((r["match_date"].replace(tzinfo=timezone.utc) - kickoff_dt).total_seconds()) > 2 * 86400:
+                continue
+            # Match by last name (handles minor name format differences)
+            players = {_last_name(r["winner"]), _last_name(r["loser"])}
+            if _last_name(home) in players and _last_name(away) in players:
+                matched = r
+                break
+
+        if matched is None:
+            continue
+
+        won = (
+            (bet["outcome"] == "home_win" and _last_name(matched["winner"]) == _last_name(home)) or
+            (bet["outcome"] == "away_win" and _last_name(matched["winner"]) == _last_name(away))
+        )
+        rows_to_update.append({
+            "id":         bet["id"],
+            "home_team":  home,
+            "away_team":  away,
+            "outcome":    bet["outcome"],
+            "kickoff":    bet["kickoff"],
+            "settled":    True,
+            "result":     "won" if won else "lost",
+            "settled_at": settled_at,
+        })
+
+    if not rows_to_update:
+        return 0
+
+    return _write_settled_bets(supabase, rows_to_update, "tennis via tennis-data.co.uk")
 
 
 def prune_stale_supabase_bets(
@@ -165,14 +292,6 @@ def prune_stale_supabase_bets(
         return 0
 
     existing: list[dict] = cast(list[dict], resp.data or [])
-    if not existing:
-        return 0
-
-    def _utc_prefix(iso: str) -> str:
-        dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
-        if dt.tzinfo is not None:
-            dt = dt.astimezone(timezone.utc)
-        return dt.strftime("%Y-%m-%dT%H:%M:%S")
 
     current_keys: set[tuple] = set()
     for m in all_value_bets:
@@ -193,36 +312,10 @@ def prune_stale_supabase_bets(
     try:
         supabase.table("bet_history").delete().in_("id", stale_ids).execute()
         logger.info("Pruned %d stale bet(s) from Supabase.", len(stale_ids))
+        return len(stale_ids)
     except Exception as exc:
         logger.error("Failed to prune stale bets from Supabase: %s", exc)
         return 0
-
-    # Tennis bets can never be settled (no results source), so:
-    # 1. Delete all unsettled tennis bets with past kickoffs
-    # 2. Delete unsettled future tennis bets for tournaments no longer active
-    tennis_pruned = 0
-    try:
-        resp = (
-            supabase.table("bet_history")
-            .select("id,league_key")
-            .eq("settled", False)
-            .eq("sport", "tennis")
-            .execute()
-        )
-        tennis_rows = cast(list[dict], resp.data or [])
-        active_tennis_keys = {k for k in processed_league_keys if k.startswith("tennis_")}
-        stale_tennis_ids = [
-            row["id"] for row in tennis_rows
-            if row["league_key"] not in active_tennis_keys
-        ]
-        if stale_tennis_ids:
-            supabase.table("bet_history").delete().in_("id", stale_tennis_ids).execute()
-            tennis_pruned = len(stale_tennis_ids)
-            logger.info("Pruned %d stale tennis bet(s) from inactive/ended tournaments.", tennis_pruned)
-    except Exception as exc:
-        logger.error("Failed to prune stale tennis bets: %s", exc)
-
-    return len(stale_ids) + tennis_pruned
 
 
 def push_bets_to_supabase(
@@ -275,6 +368,20 @@ def push_bets_to_supabase(
         logger.info("No value bets to push to Supabase.")
         return 0
 
+    # Before upserting, delete any unsettled rows for the same match that may
+    # have a stale kickoff (e.g. match was rescheduled since last run).
+    for row in rows:
+        try:
+            supabase.table("bet_history").delete().match({
+                "home_team":  row["home_team"],
+                "away_team":  row["away_team"],
+                "league_key": row["league_key"],
+                "outcome":    row["outcome"],
+                "settled":    False,
+            }).execute()
+        except Exception as exc:
+            logger.warning("Failed to delete stale bet before upsert: %s", exc)
+
     try:
         response = (
             supabase.table("bet_history")
@@ -287,100 +394,3 @@ def push_bets_to_supabase(
     except Exception as exc:
         logger.error("Failed to push bets to Supabase: %s", exc)
         raise
-
-
-def settle_tennis_supabase_bets(supabase: Client, active_tennis_league_keys: list[str]) -> int:
-    """
-    Settles unsettled tennis bets in Supabase using tennis-data.co.uk CSV results.
-
-    For each active tennis league, fetches completed match results and matches them
-    against unsettled bets by player name and date proximity.
-    """
-    now_iso = datetime.now(timezone.utc).isoformat()
-    year    = datetime.now(timezone.utc).year
-
-    try:
-        resp = (
-            supabase.table("bet_history")
-            .select("id,kickoff,home_team,away_team,outcome,league_key")
-            .eq("settled", False)
-            .eq("sport", "tennis")
-            .lt("kickoff", now_iso)
-            .execute()
-        )
-    except Exception as exc:
-        logger.error("Failed to fetch unsettled tennis bets: %s", exc)
-        return 0
-
-    unsettled = cast(list[dict], resp.data or [])
-    if not unsettled:
-        logger.debug("No unsettled past tennis bets found.")
-        return 0
-
-    # Build results index per league key: {(winner_last, loser_last, date_str): full_result}
-    results_by_league: dict[str, list[dict]] = {}
-    for lk in active_tennis_league_keys:
-        results_by_league[lk] = fetch_tennis_results(lk, year)
-
-    def _last(name: str) -> str:
-        """Last word of a player name, lowercased — used as a loose match key."""
-        return name.strip().split()[-1].lower() if name.strip() else ""
-
-    rows_to_update = []
-    settled_at = datetime.now(timezone.utc).isoformat()
-
-    for bet in unsettled:
-        lk      = bet.get("league_key", "")
-        results = results_by_league.get(lk, [])
-        if not results:
-            continue
-
-        kickoff_dt = datetime.fromisoformat(bet["kickoff"].replace("Z", "+00:00"))
-        home = bet["home_team"]
-        away = bet["away_team"]
-
-        matched = None
-        for r in results:
-            # Date guard: within ±2 days (tennis matches sometimes span midnight)
-            if abs((r["match_date"].replace(tzinfo=timezone.utc) - kickoff_dt).total_seconds()) > 2 * 86400:
-                continue
-            # Match by last name (handles minor name format differences)
-            players = {_last(r["winner"]), _last(r["loser"])}
-            if _last(home) in players and _last(away) in players:
-                matched = r
-                break
-
-        if matched is None:
-            continue
-
-        won = (
-            (bet["outcome"] == "home_win" and _last(matched["winner"]) == _last(home)) or
-            (bet["outcome"] == "away_win" and _last(matched["winner"]) == _last(away))
-        )
-        rows_to_update.append({
-            "id":         bet["id"],
-            "home_team":  home,
-            "away_team":  away,
-            "outcome":    bet["outcome"],
-            "kickoff":    bet["kickoff"],
-            "result":     "won" if won else "lost",
-            "settled_at": settled_at,
-        })
-
-    count = 0
-    for row in rows_to_update:
-        try:
-            supabase.table("bet_history").update({
-                "settled":    True,
-                "result":     row["result"],
-                "settled_at": row["settled_at"],
-            }).eq("kickoff", row["kickoff"]).eq("home_team", row["home_team"]).eq("away_team", row["away_team"]).eq("outcome", row["outcome"]).execute()
-            count += 1
-        except Exception as exc:
-            logger.error(
-                "Failed to settle tennis bet %s vs %s @ %s: %s",
-                row["home_team"], row["away_team"], row["kickoff"], exc,
-            )
-    if count:
-        logger.info("Settled %d tennis bet(s) via tennis-data.co.uk.", count)
-    return count

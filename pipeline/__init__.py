@@ -4,6 +4,7 @@ Pipeline package — per-league orchestration and settlement helpers.
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 from config import LeagueConfig, _current_season
@@ -50,6 +51,15 @@ def _evaluate_tennis_league(
 
     surface = _infer_surface(league.display_name)
     logger.debug("[%s] Inferred surface: %s", league.display_name, surface)
+
+    now = datetime.now(timezone.utc)
+    started = [e for e in upcoming_events if e["commence_time"] <= now]
+    upcoming_events = [e for e in upcoming_events if e["commence_time"] > now]
+    if started:
+        logger.info(
+            "[%s] Skipping %d tennis match(es) whose scheduled start has passed.",
+            league.display_name, len(started),
+        )
 
     value_bets = []
     for event in upcoming_events:
