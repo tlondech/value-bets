@@ -13,7 +13,7 @@ For each upcoming match across supported leagues:
 3. **Builds team ratings** using a Dixon-Coles MLE model (with rolling-window fallback), blended with head-to-head stats
 4. **Computes expected goals** (λ) per team, adjusted for fatigue, rest days, and UCL second-leg aggregate dynamics
 5. **Builds a score probability matrix** via Poisson distribution with Dixon-Coles low-score correction
-6. **Calculates Expected Value** (EV = true_prob × decimal_odds − 1) for each outcome; caps the model/implied probability ratio to filter out hallucinated high-EV bets; surfaces only the best bet per market group (1X2, O/U 2.5)
+6. **Calculates Expected Value** (EV = true_prob × decimal_odds − 1) for each outcome; caps the model/implied probability ratio to filter out hallucinated high-EV bets; surfaces only the best bet per market group (1X2, O/U)
 7. **Fetches team news** (optional) — for bets with EV ≥ 20% within 24h of kickoff, pulls injury/suspension context from NewsAPI using rule-based sentence extraction
 
 ### Tennis pipeline
@@ -30,7 +30,7 @@ For each active ATP/WTA tournament (discovered automatically each run):
 Elo ratings are computed once per run and shared across all tournaments for the same tour (ATP or WTA).
 
 ### Supported Markets
-- **Football:** 1X2 (Home Win / Draw / Away Win), Over/Under 2.5 goals
+- **Football:** 1X2 (Home Win / Draw / Away Win), Over/Under goals (line auto-selected per event)
 - **Tennis:** Match winner (Player 1 Win / Player 2 Win)
 
 ### Supported Leagues & Tournaments
@@ -128,7 +128,7 @@ All settings can be overridden via `.env`:
 | `EV_THRESHOLD` | `0.05` | Minimum EV to surface a bet (5%) |
 | `ROLLING_WINDOW` | `5` | Number of recent matches for rolling stats (football) |
 | `POISSON_MAX_GOALS` | `8` | Score matrix size (0–N goals) (football) |
-| `ODDS_TOTALS_BOOKMAKERS` | `""` | Fallback bookmaker for O/U 2.5 when Winamax has no line, e.g. `pinnacle` |
+| `ODDS_TOTALS_BOOKMAKERS` | `""` | Fallback bookmaker for O/U when Winamax has no totals line, e.g. `pinnacle` |
 
 ---
 
@@ -204,7 +204,7 @@ When fewer than 10 fixtures are available, the model falls back to rolling-windo
 
 **Bet filtering:**
 - **Probability ratio cap:** Bets are dropped when `model_prob / implied_prob > 1.3` (1.4 for UCL)
-- **Market-group deduplication:** Only the single highest-EV outcome per market group (1X2, O/U 2.5) is surfaced
+- **Market-group deduplication:** Only the single highest-EV outcome per market group (1X2, O/U) is surfaced
 
 ### Tennis — Surface-Adjusted Elo
 

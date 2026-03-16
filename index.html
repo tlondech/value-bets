@@ -263,48 +263,68 @@
     <!-- Modal body -->
     <div class="overflow-y-auto px-5 py-5 space-y-6 text-sm text-gray-500 dark:text-gray-400/90">
 
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Bet Types</p>
-        <div class="space-y-2">
-          <div class="flex justify-between">
-            <span class="text-gray-700 dark:text-gray-300">Home Win / Draw / Away Win</span>
-            <span class="text-gray-400 dark:text-gray-500">1X2 market</span>
+      <!-- Football-specific sections -->
+      <div id="legend-football">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Bet Types</p>
+          <div class="space-y-2">
+            <div class="flex justify-between">
+              <span class="text-gray-700 dark:text-gray-300">Home Win / Draw / Away Win</span>
+              <span class="text-gray-400 dark:text-gray-500">1X2 market</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-700 dark:text-gray-300">Over X / Under X</span>
+              <span class="text-gray-400 dark:text-gray-500">Total goals — line varies per event</span>
+            </div>
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-700 dark:text-gray-300">Over 2.5 / Under 2.5</span>
-            <span class="text-gray-400 dark:text-gray-500">Total goals</span>
-          </div>
+        </div>
 
+        <div class="mt-6">
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Card Indicators</p>
+          <div class="space-y-3">
+            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
+              <span class="text-amber-500 font-medium mt-0.5">⏱ 3d</span>
+              <span>Short rest — team's last match was fewer than 4 days ago. May affect performance.</span>
+            </div>
+            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
+              <span class="bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 py-0.5 rounded text-xs mt-0.5 inline-block">H2H</span>
+              <span>Head-to-head history was used to adjust the probability estimate.</span>
+            </div>
+            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
+              <span class="bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 py-0.5 rounded text-xs font-semibold mt-0.5 inline-block">2nd Leg</span>
+              <span>Second leg of a knockout tie. Aggregate score shown alongside when available.</span>
+            </div>
+            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
+              <span class="flex gap-1 items-center mt-0.5">
+                <span class="bg-green-500 inline-block w-2.5 h-2.5 rounded-full" title="Win"></span>
+                <span class="bg-gray-400 inline-block w-2.5 h-2.5 rounded-full" title="Draw"></span>
+                <span class="bg-red-500 inline-block w-2.5 h-2.5 rounded-full" title="Loss"></span>
+              </span>
+              <span>Recent form — last 5 matches (green&nbsp;W, grey&nbsp;D, red&nbsp;L), oldest on the left.</span>
+            </div>
+            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
+              <span class="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-[11px] font-medium shrink-0 mt-0.5 w-max">4th</span>
+              <span>League table rank shown next to the team name.</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Card Indicators</p>
-        <div class="space-y-3">
-          <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-            <span class="text-amber-500 font-medium mt-0.5">⏱ 3d</span>
-            <span>Short rest — team's last match was fewer than 4 days ago. May affect performance.</span>
+      <!-- Tennis-specific sections -->
+      <div id="legend-tennis" class="hidden">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Bet Types</p>
+          <div class="space-y-2">
+            <div class="flex justify-between">
+              <span class="text-gray-700 dark:text-gray-300">Player 1 Win / Player 2 Win</span>
+              <span class="text-gray-400 dark:text-gray-500">Match winner</span>
+            </div>
           </div>
-          <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-            <span class="bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 py-0.5 rounded text-xs mt-0.5 inline-block">H2H</span>
-            <span>Head-to-head history was used to adjust the probability estimate.</span>
-          </div>
-          <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-            <span class="bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 py-0.5 rounded text-xs font-semibold mt-0.5 inline-block">2nd Leg</span>
-            <span>Second leg of a knockout tie. Aggregate score shown alongside when available.</span>
-          </div>
-          <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-            <span class="flex gap-1 items-center mt-0.5">
-              <span class="bg-green-500 inline-block w-2.5 h-2.5 rounded-full" title="Win"></span>
-              <span class="bg-gray-400 inline-block w-2.5 h-2.5 rounded-full" title="Draw"></span>
-              <span class="bg-red-500 inline-block w-2.5 h-2.5 rounded-full" title="Loss"></span>
-            </span>
-            <span>Recent form — last 5 matches (green&nbsp;W, grey&nbsp;D, red&nbsp;L), oldest on the left.</span>
-          </div>
-          <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-            <span class="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-[11px] font-medium shrink-0 mt-0.5 w-max">4th</span>
-            <span>League table rank shown next to the team name.</span>
-          </div>
+        </div>
+
+        <div class="mt-6">
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Model</p>
+          <p>Surface-adjusted Elo ratings from the last 5 seasons of ATP/WTA data. Win probability blends overall Elo (40%) with surface-specific Elo (60%) for Hard, Clay, and Grass courts.</p>
         </div>
       </div>
 
@@ -1294,7 +1314,12 @@ async function init() {
 
   // Legend modal
   const legendModal = document.getElementById("legend-modal");
-  document.getElementById("open-legend-btn").addEventListener("click", () => legendModal.classList.remove("hidden"));
+  document.getElementById("open-legend-btn").addEventListener("click", () => {
+    const isTennis = activeSport === "tennis";
+    document.getElementById("legend-football").classList.toggle("hidden", isTennis);
+    document.getElementById("legend-tennis").classList.toggle("hidden", !isTennis);
+    legendModal.classList.remove("hidden");
+  });
   document.getElementById("close-legend-btn").addEventListener("click", () => legendModal.classList.add("hidden"));
   legendModal.addEventListener("click", e => { if (e.target === legendModal) legendModal.classList.add("hidden"); });
 

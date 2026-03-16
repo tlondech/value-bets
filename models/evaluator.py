@@ -68,6 +68,16 @@ def calculate_ev(true_probability: float, decimal_odds: float) -> float:
     return (true_probability * decimal_odds) - 1.0
 
 
+def _fmt_line(line: float) -> str:
+    """Normalise a totals line to its canonical half-integer outcome key.
+
+    Uses int(line) + 0.5 so that 2.25, 2.5, and 2.75 all become '2_5',
+    and 3.25/3.5/3.75 all become '3_5'. This matches how Winamax labels the market.
+    """
+    canonical = int(line) + 0.5
+    return str(canonical).replace(".", "_")
+
+
 def evaluate_match(
     home_lambda: float,
     away_lambda: float,
@@ -76,8 +86,9 @@ def evaluate_match(
     away_odds: float,
     ev_threshold: float = EV_THRESHOLD,
     max_goals: int = 8,
-    over_2_5_odds: float | None = None,
-    under_2_5_odds: float | None = None,
+    over_odds: float | None = None,
+    under_odds: float | None = None,
+    totals_line: float | None = None,
     rho: float = 0.0,
 ) -> dict:
     """
@@ -86,7 +97,11 @@ def evaluate_match(
     """
     score_matrix = build_score_matrix(home_lambda, away_lambda, max_goals, rho=rho)
     probs = calculate_match_probabilities(score_matrix)
-    ou = calculate_over_under_probs(score_matrix)
+    ou = calculate_over_under_probs(score_matrix, line=totals_line or 2.5)
+
+    line_key = _fmt_line(totals_line) if totals_line is not None else "2_5"
+    over_key  = f"over_{line_key}"
+    under_key = f"under_{line_key}"
 
     # For draw-excluded (binary) markets, derive away prob as 1 - home so the
     # two sides are guaranteed complementary and sum to exactly 1.0.
@@ -98,11 +113,11 @@ def evaluate_match(
         home_prob = probs["home_win"]
         away_prob = probs["away_win"]
 
-    home_ev = calculate_ev(home_prob, home_odds)
-    away_ev = calculate_ev(away_prob, away_odds)
-    draw_ev = calculate_ev(probs["draw"], draw_odds) if draw_odds is not None else None
-    over_2_5_ev  = calculate_ev(ou["over"],  over_2_5_odds)  if over_2_5_odds  is not None else None
-    under_2_5_ev = calculate_ev(ou["under"], under_2_5_odds) if under_2_5_odds is not None else None
+    home_ev  = calculate_ev(home_prob, home_odds)
+    away_ev  = calculate_ev(away_prob, away_odds)
+    draw_ev  = calculate_ev(probs["draw"], draw_odds) if draw_odds is not None else None
+    over_ev  = calculate_ev(ou["over"],  over_odds)  if over_odds  is not None else None
+    under_ev = calculate_ev(ou["under"], under_odds) if under_odds is not None else None
 
     value_bets = []
     if home_ev >= ev_threshold:
@@ -111,21 +126,23 @@ def evaluate_match(
         value_bets.append("away_win")
     if draw_ev is not None and draw_ev >= ev_threshold:
         value_bets.append("draw")
-    if over_2_5_ev is not None and over_2_5_ev >= ev_threshold:
-        value_bets.append("over_2_5")
-    if under_2_5_ev is not None and under_2_5_ev >= ev_threshold:
-        value_bets.append("under_2_5")
+    if over_ev is not None and over_ev >= ev_threshold:
+        value_bets.append(over_key)
+    if under_ev is not None and under_ev >= ev_threshold:
+        value_bets.append(under_key)
 
     return {
-        "home_win_prob":  home_prob,
-        "draw_prob":      probs["draw"],
-        "away_win_prob":  away_prob,
-        "over_2_5_prob":  ou["over"],
-        "under_2_5_prob": ou["under"],
-        "home_ev":        home_ev,
-        "draw_ev":        draw_ev,
-        "away_ev":        away_ev,
-        "over_2_5_ev":    over_2_5_ev,
-        "under_2_5_ev":   under_2_5_ev,
-        "value_bets":     value_bets,
+        "home_win_prob": home_prob,
+        "draw_prob":     probs["draw"],
+        "away_win_prob": away_prob,
+        over_key + "_prob":  ou["over"],
+        under_key + "_prob": ou["under"],
+        "home_ev":  home_ev,
+        "draw_ev":  draw_ev,
+        "away_ev":  away_ev,
+        over_key + "_ev":  over_ev,
+        under_key + "_ev": under_ev,
+        "value_bets": value_bets,
+        "over_key":   over_key,
+        "under_key":  under_key,
     }

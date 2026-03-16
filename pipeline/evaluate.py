@@ -26,7 +26,7 @@ from models.features import (
     fit_dixon_coles,
     resolve_team_name,
 )
-from pipeline.helpers import _OUTCOME_LABELS, is_live
+from pipeline.helpers import get_outcome_label, is_live
 
 logger = logging.getLogger(__name__)
 
@@ -195,20 +195,23 @@ def evaluate_matches(
             away_odds=event["away_odds"],
             ev_threshold=cfg.ev_threshold,
             max_goals=cfg.poisson_max_goals,
-            over_2_5_odds=event.get("over_2_5_odds"),
-            under_2_5_odds=event.get("under_2_5_odds"),
+            over_odds=event.get("over_odds"),
+            under_odds=event.get("under_odds"),
+            totals_line=event.get("totals_line"),
             rho=dc_params["rho"] if dc_params is not None else 0.0,
         )
 
         if not result["value_bets"]:
             continue
 
+        over_key  = result["over_key"]
+        under_key = result["under_key"]
         outcome_map = {
-            "home_win":  (result["home_win_prob"],  event["home_odds"],           result["home_ev"]),
-            "draw":      (result["draw_prob"],      event["draw_odds"],           result["draw_ev"]),
-            "away_win":  (result["away_win_prob"],  event["away_odds"],           result["away_ev"]),
-            "over_2_5":  (result["over_2_5_prob"],  event.get("over_2_5_odds"),   result["over_2_5_ev"]),
-            "under_2_5": (result["under_2_5_prob"], event.get("under_2_5_odds"),  result["under_2_5_ev"]),
+            "home_win": (result["home_win_prob"], event["home_odds"],          result["home_ev"]),
+            "draw":     (result["draw_prob"],     event["draw_odds"],          result["draw_ev"]),
+            "away_win": (result["away_win_prob"], event["away_odds"],          result["away_ev"]),
+            over_key:   (result[over_key + "_prob"],  event.get("over_odds"),  result[over_key + "_ev"]),
+            under_key:  (result[under_key + "_prob"], event.get("under_odds"), result[under_key + "_ev"]),
         }
         kickoff_iso = event["commence_time"].isoformat()
         key = (home_winamax, away_winamax, kickoff_iso)
@@ -261,7 +264,7 @@ def evaluate_matches(
                 continue
             match_bets[key]["bets"].append({
                 "outcome":       outcome,
-                "outcome_label": _OUTCOME_LABELS[outcome],
+                "outcome_label": get_outcome_label(outcome),
                 "odds":          odds,
                 "true_prob":     round(true_prob, 4),
                 "ev":            round(ev, 4),

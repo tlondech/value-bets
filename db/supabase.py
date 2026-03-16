@@ -16,6 +16,22 @@ from models.features import resolve_team_name
 logger = logging.getLogger(__name__)
 
 
+def _settle_totals(outcome: str, hg: int, ag: int) -> bool | None:
+    """Parse a dynamic totals outcome string and determine if it won.
+
+    Examples: "over_2_5" → line=2.5, threshold=2 → won if hg+ag > 2
+              "under_3_5" → line=3.5, threshold=3 → won if hg+ag <= 3
+    Returns None if the outcome string is not a totals bet.
+    """
+    if not outcome.startswith(("over_", "under_")):
+        return None
+    prefix, line_str = outcome.split("_", 1)
+    parts = line_str.split("_")
+    line = float(f"{parts[0]}.{''.join(parts[1:])}") if len(parts) > 1 else float(parts[0])
+    threshold = int(line)
+    return (hg + ag > threshold) if prefix == "over" else (hg + ag <= threshold)
+
+
 # ---------------------------------------------------------------------------
 # Pure stateless helpers
 # ---------------------------------------------------------------------------
@@ -159,13 +175,10 @@ def settle_supabase_bets(supabase: Client, all_raw_fixtures: list[dict], name_ma
             continue
 
         hg, ag = fixture["home_goals"], fixture["away_goals"]
-        won = {
-            "home_win":  hg > ag,
-            "draw":      hg == ag,
-            "away_win":  ag > hg,
-            "over_2_5":  hg + ag > 2,
-            "under_2_5": hg + ag <= 2,
-        }.get(bet["outcome"], False)
+        outcome = bet["outcome"]
+        won = {"home_win": hg > ag, "draw": hg == ag, "away_win": ag > hg}.get(outcome)
+        if won is None:
+            won = _settle_totals(outcome, hg, ag) or False
 
         rows_to_update.append({
             "kickoff":           bet["kickoff"],

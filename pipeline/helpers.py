@@ -12,13 +12,27 @@ logger_name = __name__
 import logging
 logger = logging.getLogger(__name__)
 
-_OUTCOME_LABELS = {
-    "home_win":  "Home Win",
-    "draw":      "Draw",
-    "away_win":  "Away Win",
-    "over_2_5":  "Over 2.5",
-    "under_2_5": "Under 2.5",
+_STATIC_LABELS = {
+    "home_win": "Home Win",
+    "draw":     "Draw",
+    "away_win": "Away Win",
 }
+
+
+def get_outcome_label(outcome: str) -> str:
+    """Return a human-readable label for a bet outcome key.
+
+    Static outcomes (home_win, draw, away_win) use a lookup table.
+    Totals outcomes encode a normalised half-integer line: "over_2_5" → "Over 2.5".
+    """
+    if outcome in _STATIC_LABELS:
+        return _STATIC_LABELS[outcome]
+    if outcome.startswith(("over_", "under_")):
+        prefix, line_str = outcome.split("_", 1)
+        parts = line_str.split("_")
+        line = f"{parts[0]}.{''.join(parts[1:])}" if len(parts) > 1 else parts[0]
+        return f"{'Over' if prefix == 'over' else 'Under'} {line}"
+    return outcome
 
 
 def is_live(commence_time: datetime, window_hours: float = LIVE_MATCH_WINDOW_HOURS) -> bool:

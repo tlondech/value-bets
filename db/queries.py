@@ -16,6 +16,22 @@ from db.schema import BetHistory, Fixture, Match, Odds
 logger = logging.getLogger(__name__)
 
 
+def _settle_totals(outcome: str, hg: int, ag: int) -> bool | None:
+    """Parse a dynamic totals outcome string and determine if it won.
+
+    Examples: "over_2_5" → line=2.5, threshold=2 → won if hg+ag > 2
+              "over_3_25" → line=3.25, threshold=3 → won if hg+ag > 3
+    Returns None if the outcome string is not a totals bet.
+    """
+    if not outcome.startswith(("over_", "under_")):
+        return None
+    prefix, line_str = outcome.split("_", 1)
+    parts = line_str.split("_")
+    line = float(f"{parts[0]}.{''.join(parts[1:])}") if len(parts) > 1 else float(parts[0])
+    threshold = int(line)
+    return (hg + ag > threshold) if prefix == "over" else (hg + ag <= threshold)
+
+
 # ---------------------------------------------------------------------------
 # Upsert helpers
 # ---------------------------------------------------------------------------
@@ -51,7 +67,7 @@ def upsert_odds(session: Session, event: dict) -> None:
         away_odds=event["away_odds"],
         fetched_at=datetime.now(tz=timezone.utc),
     ))
-    if event.get("over_2_5_odds") is not None or event.get("under_2_5_odds") is not None:
+    if event.get("over_odds") is not None or event.get("under_odds") is not None:
         session.query(Odds).filter(
             Odds.match_id == event["match_id"],
             Odds.market == "totals",
@@ -60,8 +76,9 @@ def upsert_odds(session: Session, event: dict) -> None:
             match_id=event["match_id"],
             bookmaker=event["bookmaker"],
             market="totals",
-            home_odds=event.get("over_2_5_odds"),
-            away_odds=event.get("under_2_5_odds"),
+            home_odds=event.get("over_odds"),
+            away_odds=event.get("under_odds"),
+            totals_line=event.get("totals_line"),
             fetched_at=datetime.now(tz=timezone.utc),
         ))
 
@@ -117,8 +134,9 @@ def load_upcoming_events_from_db(session: Session, league_key: str) -> list[dict
             "home_odds": h2h.home_odds,
             "draw_odds": h2h.draw_odds,
             "away_odds": h2h.away_odds,
-            "over_2_5_odds": totals.home_odds if totals else None,
-            "under_2_5_odds": totals.away_odds if totals else None,
+            "over_odds":   totals.home_odds if totals else None,
+            "under_odds":  totals.away_odds if totals else None,
+            "totals_line": totals.totals_line if totals else None,
             "bookmaker": h2h.bookmaker,
             "stage": match.stage,
         })
@@ -332,12 +350,12 @@ def settle_bets(session) -> int:
 
         hg, ag = fixture.home_goals, fixture.away_goals
         won = {
-            "home_win":  hg > ag,
-            "draw":      hg == ag,
-            "away_win":  ag > hg,
-            "over_2_5":  hg + ag > 2,
-            "under_2_5": hg + ag <= 2,
-        }.get(bet.outcome, False)
+            "home_win": hg > ag,
+            "draw":     hg == ag,
+            "away_win": ag > hg,
+        }.get(bet.outcome)
+        if won is None:
+            won = _settle_totals(bet.outcome, hg, ag) or False
 
         bet.settled = True
         bet.result = "won" if won else "lost"

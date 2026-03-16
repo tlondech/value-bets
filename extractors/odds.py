@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import requests
 
-from constants import ODDS_API_QUOTA_CRITICAL, ODDS_API_TIMEOUT, TOTALS_LINE_TOLERANCE
+from constants import ODDS_API_QUOTA_CRITICAL, ODDS_API_TIMEOUT
 
 # Imported lazily inside fetch_active_tennis_leagues to avoid circular imports
 # (config imports from constants; odds is imported by config indirectly)
@@ -15,6 +15,32 @@ BASE_URL = "https://api.the-odds-api.com"
 
 class OddsAPIError(Exception):
     pass
+
+
+def _pick_best_totals_line(outcomes: list[dict]) -> tuple[float | None, float | None, float | None]:
+    """Return (line, over_price, under_price) for the totals line with the least vig.
+
+    Groups outcomes by point value, then picks the line where both Over and Under
+    are present and 1/over + 1/under is smallest (most efficient market).
+    """
+    lines: dict[float, dict] = {}
+    for o in outcomes:
+        pt = o.get("point")
+        name = o.get("name")
+        price = o.get("price")
+        if pt is None or name not in ("Over", "Under") or not price:
+            continue
+        lines.setdefault(pt, {})[name] = price
+
+    best_line, best_over, best_under = None, None, None
+    best_vig = float("inf")
+    for pt, sides in lines.items():
+        if "Over" in sides and "Under" in sides:
+            vig = 1.0 / sides["Over"] + 1.0 / sides["Under"]
+            if vig < best_vig:
+                best_vig = vig
+                best_line, best_over, best_under = pt, sides["Over"], sides["Under"]
+    return best_line, best_over, best_under
 
 
 class OddsAPIClient:
@@ -145,10 +171,11 @@ class OddsAPIClient:
             )
             return None
 
-        # Parse totals market for the 2.5 goals line.
-        # Scan primary bookmaker first, then fallback bookmakers until both sides are found.
-        over_2_5_odds = None
-        under_2_5_odds = None
+        # Parse totals market — pick the line with the least vig (most liquid).
+        # Scan primary bookmaker first, then fallback bookmakers.
+        totals_line = None
+        over_odds = None
+        under_odds = None
         ordered_bks = (
             [bk_map[self.bookmaker]] if self.bookmaker in bk_map else []
         ) + [bk_map[k] for k in bk_map if k != self.bookmaker]
@@ -157,13 +184,11 @@ class OddsAPIClient:
             totals = entry_markets.get("totals")
             if not totals:
                 continue
-            for outcome in totals.get("outcomes", []):
-                if abs(outcome.get("point", 0) - 2.5) < TOTALS_LINE_TOLERANCE:
-                    if outcome["name"] == "Over" and over_2_5_odds is None:
-                        over_2_5_odds = outcome["price"]
-                    elif outcome["name"] == "Under" and under_2_5_odds is None:
-                        under_2_5_odds = outcome["price"]
-            if over_2_5_odds is not None and under_2_5_odds is not None:
+            line, o_price, u_price = _pick_best_totals_line(totals.get("outcomes", []))
+            if line is not None:
+                totals_line = line
+                over_odds = o_price
+                under_odds = u_price
                 break
 
         return {
@@ -174,8 +199,9 @@ class OddsAPIClient:
             "home_odds": home_odds,
             "draw_odds": draw_odds,
             "away_odds": away_odds,
-            "over_2_5_odds": over_2_5_odds,
-            "under_2_5_odds": under_2_5_odds,
+            "totals_line": totals_line,
+            "over_odds": over_odds,
+            "under_odds": under_odds,
             "bookmaker": primary_bk["key"],
         }
 

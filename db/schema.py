@@ -37,6 +37,7 @@ class Odds(Base):
     home_odds = Column(Float, nullable=True)
     draw_odds = Column(Float, nullable=True)
     away_odds = Column(Float, nullable=True)
+    totals_line = Column(Float, nullable=True)
     fetched_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -122,6 +123,7 @@ def init_db(db_path: str):
             "ALTER TABLE bet_history ADD COLUMN agg_home INTEGER",
             "ALTER TABLE bet_history ADD COLUMN agg_away INTEGER",
             "ALTER TABLE bet_history ADD COLUMN leg1_result TEXT",
+            "ALTER TABLE odds ADD COLUMN totals_line REAL",
         ]:
             try:
                 conn.execute(text(col_ddl))
