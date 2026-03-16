@@ -75,6 +75,16 @@
       <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Bet Type</p>
       <div id="bet-type-pills" class="flex flex-wrap gap-1.5"></div>
     </div>
+    <!-- Date -->
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Date</p>
+      <div id="date-bets-section">
+        <div id="date-bets-pills" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div id="date-hist-section" class="hidden">
+        <div id="date-hist-pills" class="flex flex-wrap gap-1.5"></div>
+      </div>
+    </div>
 
   </div>
 </aside>
@@ -371,6 +381,8 @@ let histData      = [];
 let activeLeague  = "all";
 let activeBetType = "all";
 let teamSearch    = "";
+let activeDateBets = "all";  // "all" | "today" | "tomorrow" | "week"
+let activeDateHist = "all";  // "all" | "7d" | "30d" | "3m"
 let histSortCol      = "kickoff";
 let histSortDir      = "desc";
 let histStatusFilter = "settled";
@@ -679,6 +691,36 @@ function renderLeaguePills(matches) {
   });
 }
 
+// ── Date range presets ─────────────────────────────────────────
+const DATE_RANGES_BETS = [
+  {key:"all",      label:"All"},
+  {key:"today",    label:"Today"},
+  {key:"tomorrow", label:"Tomorrow"},
+  {key:"week",     label:"This week"},
+];
+const DATE_RANGES_HIST = [
+  {key:"all",  label:"All time"},
+  {key:"7d",   label:"Last 7 days"},
+  {key:"30d",  label:"Last 30 days"},
+  {key:"3m",   label:"Last 3 months"},
+];
+function renderDatePills() {
+  const active   = "bg-indigo-600 text-white";
+  const inactive = "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400";
+  document.getElementById("date-bets-pills").innerHTML = DATE_RANGES_BETS.map(t =>
+    `<button class="date-bets-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${activeDateBets===t.key?active:inactive}" data-range="${t.key}">${t.label}</button>`
+  ).join("");
+  document.querySelectorAll(".date-bets-pill").forEach(btn => {
+    btn.addEventListener("click", () => { activeDateBets = btn.dataset.range; updateFilterBadge(); renderBetsPanel(); });
+  });
+  document.getElementById("date-hist-pills").innerHTML = DATE_RANGES_HIST.map(t =>
+    `<button class="date-hist-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${activeDateHist===t.key?active:inactive}" data-range="${t.key}">${t.label}</button>`
+  ).join("");
+  document.querySelectorAll(".date-hist-pill").forEach(btn => {
+    btn.addEventListener("click", () => { activeDateHist = btn.dataset.range; updateFilterBadge(); resetHistoryPagination(); });
+  });
+}
+
 // ── Render bet-type pills ──────────────────────────────────────
 const BET_TYPES = [
   {key:"all",     label:"All Types"},
@@ -705,6 +747,7 @@ function renderBetsPanel() {
   const allMatches = groupIntoMatches(betsData);
   renderLeaguePills(allMatches);
   renderBetTypePills();
+  renderDatePills();
 
   let filtered = allMatches;
 
@@ -719,6 +762,21 @@ function renderBetsPanel() {
     filtered = filtered.filter(m =>
       m.home_team.toLowerCase().includes(q) || m.away_team.toLowerCase().includes(q)
     );
+  }
+
+  if (activeDateBets !== "all") {
+    const tz       = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const today    = new Date(new Date().toLocaleDateString("en-CA", {timeZone:tz}));
+    const tomorrow = new Date(today.getTime() + 864e5);
+    const dayAfter = new Date(today.getTime() + 2*864e5);
+    const weekEnd  = new Date(today.getTime() + 7*864e5);
+    filtered = filtered.filter(m => {
+      const ko = new Date(m.kickoff);
+      if (activeDateBets === "today")    return ko >= today    && ko < tomorrow;
+      if (activeDateBets === "tomorrow") return ko >= tomorrow && ko < dayAfter;
+      if (activeDateBets === "week")     return ko >= today    && ko < weekEnd;
+      return true;
+    });
   }
 
   // Filter bets within each match if bet type is active
@@ -841,7 +899,7 @@ document.addEventListener("click", e => {
 
 // ── History table ──────────────────────────────────────────────
 const HIST_COLS = [
-  { key:"kickoff",      label:"Date",   render: r => `<span class="whitespace-nowrap">${esc(new Date(r.kickoff).toLocaleDateString("en-GB",{day:"numeric",month:"short"}))}</span>` },
+  { key:"kickoff",      label:"Date",   render: r => { const d=new Date(r.kickoff); const tz=Intl.DateTimeFormat().resolvedOptions().timeZone; const date=d.toLocaleDateString(undefined,{day:"numeric",month:"short",timeZone:tz}); const time=d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit",timeZone:tz}); return `<span class="whitespace-nowrap leading-tight">${esc(date)}<br><span class="text-gray-400 dark:text-gray-500 text-xs">${esc(time)}</span></span>`; } },
   { key:"league_name",  label:"League", render: r => `<span class="whitespace-nowrap">${leagueBadge(r.league_key, LEAGUE_SHORT_NAMES[r.league_key] || r.league_name)}</span>` },
   { key:"home_team",    label:"Match",  render: r => `<span class="whitespace-nowrap">${esc(r.home_team)} <span class="text-gray-400 mx-0.5">v</span> ${esc(r.away_team)}</span>` },
   { key:"outcome_label",label:"Bet",    render: r => `<span class="whitespace-nowrap px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-xs font-medium">${esc(r.outcome_label)}</span>` },
@@ -853,6 +911,7 @@ const HIST_COLS = [
 ];
 
 function renderHistory() {
+  renderDatePills();
   // Build the visible row set (drawer filters applied server-side), then status tab
   let allRows = [
     ...histData.map(r => ({...r, _status: r.result === "won" ? "won" : "lost"})),
@@ -982,6 +1041,14 @@ function updateFilterUI() {
   if (teamSearch) {
     active.push({ key: "team", label: `"${teamSearch}"` });
   }
+  if (activeDateBets !== "all") {
+    const r = DATE_RANGES_BETS.find(t => t.key === activeDateBets);
+    active.push({ key: "datebets", label: r ? r.label : activeDateBets });
+  }
+  if (activeDateHist !== "all") {
+    const r = DATE_RANGES_HIST.find(t => t.key === activeDateHist);
+    active.push({ key: "datehist", label: r ? r.label : activeDateHist });
+  }
   const count = active.length;
 
   // ── Badge ─────────────────────────────────────────────────────
@@ -1003,9 +1070,15 @@ const updateFilterBadge = updateFilterUI;
 
 // ── Main tab switching ─────────────────────────────────────────
 function setMainTab(tab) {
+  // Reset date filter for the tab being left
+  if (tab === "history") activeDateBets = "all";
+  else                   activeDateHist = "all";
+
   mainTab = tab;
   document.getElementById("panel-bets").classList.toggle("hidden", tab!=="bets");
   document.getElementById("panel-history").classList.toggle("hidden", tab!=="history");
+  document.getElementById("date-bets-section").classList.toggle("hidden", tab!=="bets");
+  document.getElementById("date-hist-section").classList.toggle("hidden", tab!=="history");
   document.querySelectorAll(".main-tab-btn").forEach(btn => {
     const isActive = btn.dataset.main===tab;
     const base = btn.closest("nav")
@@ -1017,6 +1090,7 @@ function setMainTab(tab) {
                : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400",
     ].join(" ");
   });
+  updateFilterBadge();
   if (tab==="history") renderHistory();
 }
 
@@ -1052,6 +1126,11 @@ async function fetchHistoryPage(page = 0) {
   if (activeLeague  !== "all") q = q.eq("league_key", activeLeague);
   if (activeBetType !== "all") q = q.eq("outcome",    activeBetType);
   if (teamSearch)               q = q.or(`home_team.ilike.%${teamSearch}%,away_team.ilike.%${teamSearch}%`);
+  if (activeDateHist !== "all") {
+    const days  = activeDateHist === "7d" ? 7 : activeDateHist === "30d" ? 30 : 90;
+    const since = new Date(Date.now() - days * 864e5).toISOString();
+    q = q.gte("kickoff", since);
+  }
   const { data, error, count } = await q;
   if (error) throw error;
   return { data, count };
@@ -1111,9 +1190,11 @@ async function init() {
 
   // Clear filters
   document.getElementById("clear-filters-btn").addEventListener("click", () => {
-    activeLeague  = "all";
-    activeBetType = "all";
-    teamSearch    = "";
+    activeLeague   = "all";
+    activeBetType  = "all";
+    teamSearch     = "";
+    activeDateBets = "all";
+    activeDateHist = "all";
     document.getElementById("team-search").value = "";
     updateFilterUI();
     renderBetsPanel();
