@@ -112,7 +112,9 @@ The report opens automatically in your browser.
 
 ## Automated Daily Updates
 
-A GitHub Actions workflow (`.github/workflows/daily_update.yml`) runs every 6 hours and commits the updated `index.html` directly to the repository. This lets you host the report as a static GitHub Pages site with no manual intervention.
+A GitHub Actions workflow (`.github/workflows/daily_update.yml`) runs `python main.py --fetch` four times a day at **10:00, 14:00, 18:00, and 22:00 UTC**. It writes bet recommendations directly to Supabase; the frontend reads from Supabase at load time, so no file is committed on each run.
+
+The only files the workflow ever commits are the three crest map JSONs (`data/football_crest_map.json`, `data/tennis_crest_map.json`, `data/nba_crest_map.json`) — and only when they actually change (new teams or players detected).
 
 The workflow can also be triggered manually via `workflow_dispatch`.
 
