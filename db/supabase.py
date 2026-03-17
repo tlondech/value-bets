@@ -378,6 +378,8 @@ def settle_nba_supabase_bets(supabase: Client, nba_league_keys: list[str]) -> in
             "kickoff":   bet["kickoff"],
             "settled":   True,
             "result":    "won" if won else "lost",
+            "actual_home_goals": home_pts,
+            "actual_away_goals": away_pts,
             "settled_at": settled_at,
         })
 
