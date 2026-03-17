@@ -106,7 +106,7 @@ NEWS_API_KEY=your_key_here             # optional — https://newsapi.org (100 r
 python main.py
 ```
 
-The report opens automatically in your browser. Results are also saved to `data/latest_report.json`.
+The report opens automatically in your browser.
 
 ---
 
@@ -214,8 +214,7 @@ All settings can be overridden via `.env`:
     ├── football_crest_map.json      # Football team crest URLs
     ├── tennis_crest_map.json        # Tennis player flag URLs (auto-updated each run)
     ├── nba_crest_map.json           # NBA team logo URLs (NBA CDN)
-    ├── bets.db                      # SQLite database
-    └── latest_report.json           # Most recent report output
+    └── bets.db                      # SQLite database
 ```
 
 ---
@@ -313,9 +312,6 @@ Interactive dashboard showing:
 - Team news (injury/suspension context) for high-EV football bets near kickoff (requires `NEWS_API_KEY`)
 - Bet history with settled outcomes (won/lost)
 - Filter drawer to narrow bets by league, market, or EV range
-
-### JSON Report (`data/latest_report.json`)
-Machine-readable version of the same data.
 
 ### Database (`data/bets.db`)
 SQLite database with four tables:

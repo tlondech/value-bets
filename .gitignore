@@ -1,7 +1,6 @@
 .env
 *.db
 data/*.db
-data/latest_report.json
 logs/
 __pycache__/
 *.pyc

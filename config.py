@@ -112,7 +112,6 @@ class Config:
     football_crest_map_path: str = "data/football_crest_map.json"
     tennis_crest_map_path: str = "data/tennis_crest_map.json"
     nba_crest_map_path: str = "data/nba_crest_map.json"
-    report_json_path: str = "data/latest_report.json"
     report_html_path: str = "index.html"
     log_dir: str = "logs"
 
