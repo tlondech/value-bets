@@ -19,8 +19,15 @@ logger = logging.getLogger(__name__)
 def _settle_totals(outcome: str, hg: int, ag: int) -> bool | None:
     """Parse a dynamic totals outcome string and determine if it won.
 
-    Examples: "over_2_5" → line=2.5, threshold=2 → won if hg+ag > 2
-              "under_3_5" → line=3.5, threshold=3 → won if hg+ag <= 3
+    When the line is a whole number the actual bet placed is on the nearest
+    available half-point: over_234_0 → over_233_5, under_234_0 → under_234_5.
+    The adjusted line is then settled with the standard half-point logic.
+
+    Examples:
+        "over_2_5"    → line=2.5  → won if hg+ag > 2
+        "under_3_5"   → line=3.5  → won if hg+ag <= 3
+        "over_234_0"  → line=233.5 → won if hg+ag > 233  (i.e. >= 234)
+        "under_234_0" → line=234.5 → won if hg+ag <= 234
     Returns None if the outcome string is not a totals bet.
     """
     if not outcome.startswith(("over_", "under_")):
@@ -28,6 +35,8 @@ def _settle_totals(outcome: str, hg: int, ag: int) -> bool | None:
     prefix, line_str = outcome.split("_", 1)
     parts = line_str.split("_")
     line = float(f"{parts[0]}.{''.join(parts[1:])}") if len(parts) > 1 else float(parts[0])
+    if line == int(line):
+        line = (line - 0.5) if prefix == "over" else (line + 0.5)
     threshold = int(line)
     return (hg + ag > threshold) if prefix == "over" else (hg + ag <= threshold)
 
@@ -280,9 +289,17 @@ def settle_tennis_supabase_bets(supabase: Client, active_tennis_league_keys: lis
     return _write_settled_bets(supabase, rows_to_update, "tennis via tennis-data.co.uk")
 
 
-def settle_nba_supabase_bets(supabase: Client, nba_league_keys: list[str]) -> int:
+def settle_nba_supabase_bets(
+    supabase: Client,
+    nba_league_keys: list[str],
+    name_map: dict[str, dict[str, str]] | None = None,
+) -> int:
     """
     Settles unsettled NBA bets in Supabase using nba_api game results.
+
+    Uses team_name_map.json["nba"] to normalise both sides to abbreviations
+    (e.g. "LA Clippers" and "Los Angeles Clippers" both → "LAC"), so matching
+    is robust to display-name differences between the odds source and nba_api.
 
     Only attempts settlement for games that started more than NBA_LIVE_MATCH_WINDOW_HOURS
     ago to ensure the game has actually finished (overtime, TV timeouts, etc.).
@@ -324,10 +341,21 @@ def settle_nba_supabase_bets(supabase: Client, nba_league_keys: list[str]) -> in
         logger.debug("No recent NBA results found for settlement.")
         return 0
 
-    # Index results by (home_team_lower, away_team_lower, game_date)
+    # Build abbreviation lookup from team_name_map["nba"] so that both the
+    # odds-source name ("Los Angeles Clippers") and the nba_api name ("LA Clippers")
+    # resolve to the same abbreviation ("LAC") for matching.
+    nba_abbr: dict[str, str] = {}
+    if name_map:
+        nba_abbr = {k.lower(): v for k, v in name_map.get("nba", {}).items()
+                    if not k.startswith("_")}
+
+    def _to_abbr(name: str) -> str:
+        return nba_abbr.get(name.lower(), name.lower())
+
+    # Index results by (home_abbr, away_abbr, game_date)
     results_index: dict[tuple, dict] = {}
     for r in results:
-        key = (r["home_team"].lower(), r["away_team"].lower(), r["game_date"])
+        key = (_to_abbr(r["home_team"]), _to_abbr(r["away_team"]), r["game_date"])
         results_index[key] = r
 
     rows_to_update = []
@@ -335,14 +363,14 @@ def settle_nba_supabase_bets(supabase: Client, nba_league_keys: list[str]) -> in
 
     for bet in unsettled:
         kickoff_dt = datetime.fromisoformat(bet["kickoff"].replace("Z", "+00:00"))
-        home_lower = bet["home_team"].lower()
-        away_lower = bet["away_team"].lower()
+        home_abbr = _to_abbr(bet["home_team"])
+        away_abbr = _to_abbr(bet["away_team"])
 
         # Try to match within ±1 day of kickoff
         matched = None
         for delta_days in (0, 1, -1):
             candidate_date = (kickoff_dt + timedelta(days=delta_days)).date()
-            result = results_index.get((home_lower, away_lower, candidate_date))
+            result = results_index.get((home_abbr, away_abbr, candidate_date))
             if result:
                 matched = result
                 break

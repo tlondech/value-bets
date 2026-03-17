@@ -175,7 +175,7 @@ def _settle_all(supabase, cfg, all_raw_fixtures: list[dict], name_map: dict, for
 
     nba_keys = [lg.key for lg in cfg.enabled_leagues if lg.sport_type == "basketball"]
     if nba_keys:
-        settle_nba_supabase_bets(supabase, nba_keys)
+        settle_nba_supabase_bets(supabase, nba_keys, name_map)
 
 
 # ---------------------------------------------------------------------------

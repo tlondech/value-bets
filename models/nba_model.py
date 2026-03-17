@@ -267,10 +267,15 @@ def evaluate_nba_match(
         p_over  = float(norm.sf(totals_line, loc=t_mu, scale=t_std))
         p_under = 1.0 - p_over
 
-        line_key = str(totals_line).replace(".", "_")
+        # Whole-number lines aren't available in the app; we always bet the
+        # nearest half-point: Over 234.0 → Over 233.5, Under 234.0 → Under 234.5.
+        over_line  = (totals_line - 0.5) if totals_line == int(totals_line) else totals_line
+        under_line = (totals_line + 0.5) if totals_line == int(totals_line) else totals_line
+        over_key   = str(over_line).replace(".", "_")
+        under_key  = str(under_line).replace(".", "_")
         for outcome, true_prob, odds, label in (
-            (f"over_{line_key}",  p_over,  over_odds,  f"Over {totals_line}"),
-            (f"under_{line_key}", p_under, under_odds, f"Under {totals_line}"),
+            (f"over_{over_key}",   p_over,  over_odds,  f"Over {over_line}"),
+            (f"under_{under_key}", p_under, under_odds, f"Under {under_line}"),
         ):
             ev = calculate_ev(true_prob, odds)
             if ev >= ev_threshold and true_prob * odds <= max_prob_ratio:
