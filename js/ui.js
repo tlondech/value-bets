@@ -1,6 +1,11 @@
 import { state } from "./state.js";
 import { fetchHistoryPage } from "./api.js";
 
+// ── Info tooltip helper ────────────────────────────────────────
+function infoIcon(text) {
+  return `<span class="info-icon inline-flex items-center justify-center ml-1 w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-indigo-400 hover:text-indigo-500 transition-colors text-[9px] font-bold leading-none cursor-default flex-shrink-0" title="${esc(text)}">i</span>`;
+}
+
 // ── Formatting helpers ─────────────────────────────────────────
 export function esc(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -109,11 +114,11 @@ const HIST_COLS = [
   { key: "kickoff",       label: "Date",   render: r => { const d = new Date(r.kickoff); const tz = Intl.DateTimeFormat().resolvedOptions().timeZone; const date = d.toLocaleDateString(undefined, { day: "numeric", month: "short", timeZone: tz }); const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", timeZone: tz }); return `<span class="whitespace-nowrap leading-tight">${esc(date)}<br><span class="text-gray-400 dark:text-gray-500 text-xs">${esc(time)}</span></span>`; } },
   { key: "league_name",   label: "League", render: r => `<span class="whitespace-nowrap">${leagueBadge(r.league_key, LEAGUE_SHORT_NAMES[r.league_key] || r.league_name)}</span>` },
   { key: "home_team",     label: "Match",  render: r => `<span class="whitespace-nowrap">${esc(r.home_team)} <span class="text-gray-400 mx-0.5">v</span> ${esc(r.away_team)}</span>` },
-  { key: "outcome_label", label: "Bet",    render: r => `<span class="whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium ${betBadgeCls(r.result, true)}">${esc(r.outcome_label)}</span>` },
+  { key: "outcome_label", label: "Bet",    labelHtml: `Bet${infoIcon("Recommended outcome")}`,   render: r => `<span class="whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium ${betBadgeCls(r.result, true)}">${esc(r.outcome_label)}</span>` },
   { key: "_score",        label: "Score",  render: r => r.actual_home_goals != null ? `${r.actual_home_goals}–${r.actual_away_goals}` : "—", sortKey: "actual_home_goals", align: "center" },
-  { key: "odds",          label: "Odds",   render: r => `<span class="font-mono">${Number(r.odds).toFixed(2)}</span>`, align: "right" },
-  { key: "true_prob",     label: "Prob%",  render: r => `${(r.true_prob * 100).toFixed(1)}%`, align: "right" },
-  { key: "ev",            label: "EV%",    render: r => evLabel(r.ev), align: "right" },
+  { key: "odds",          label: "Odds",   labelHtml: `Odds${infoIcon("Decimal odds at time of recommendation")}`,  render: r => `<span class="font-mono">${Number(r.odds).toFixed(2)}</span>`, align: "right" },
+  { key: "true_prob",     label: "Prob%",  labelHtml: `Prob%${infoIcon("Model's estimated win probability")}`, render: r => `${(r.true_prob * 100).toFixed(1)}%`, align: "right" },
+  { key: "ev",            label: "EV%",    labelHtml: `EV%${infoIcon("Expected value — edge over the bookmaker")}`,  render: r => evLabel(r.ev), align: "right" },
 ];
 
 // ── Badge / chip helpers ───────────────────────────────────────
@@ -365,10 +370,10 @@ export function renderCard(m, opts = {}) {
       <table class="w-full text-sm table-fixed">
         <thead>
           <tr class="text-xs text-gray-400 uppercase">
-            <th class="w-[32%] pb-1 pr-2 text-left font-medium">Bet</th>
-            <th class="pb-1 pr-2 text-right font-medium">Odds</th>
-            <th class="pb-1 pr-2 text-right font-medium">Prob</th>
-            <th class="pb-1 text-right font-medium">EV</th>
+            <th class="w-[32%] pb-1 pr-2 text-left font-medium"><span class="inline-flex items-center">Bet${infoIcon("The outcome the model recommends backing")}</span></th>
+            <th class="pb-1 pr-2 text-right font-medium"><span class="inline-flex items-center justify-end">Odds${infoIcon("Decimal odds offered by the bookmaker")}</span></th>
+            <th class="pb-1 pr-2 text-right font-medium"><span class="inline-flex items-center justify-end">Prob${infoIcon("Model's estimated probability of this outcome")}</span></th>
+            <th class="pb-1 text-right font-medium"><span class="inline-flex items-center justify-end">EV${infoIcon("Expected value — gain per €1 staked if the model is right. Green = good value, yellow/red = high edge, verify odds first")}</span></th>
           </tr>
         </thead>
         <tbody>${betsRows}</tbody>
@@ -844,7 +849,10 @@ export function renderHistory() {
   thead.innerHTML = "<tr>" + HIST_COLS.map(c => {
     const sk    = c.sortKey || c.key;
     const align = c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "text-left";
-    return `<th class="sortable px-4 py-3 ${align}" data-col="${sk}">${esc(c.label)}</th>`;
+    const inner = c.labelHtml
+      ? `<span class="inline-flex items-center ${c.align === "right" ? "justify-end" : ""}">${c.labelHtml}</span>`
+      : esc(c.label);
+    return `<th class="sortable px-4 py-3 ${align}" data-col="${sk}">${inner}</th>`;
   }).join("") + "</tr>";
   thead.querySelectorAll("th.sortable").forEach(th => {
     th.addEventListener("click", () => {

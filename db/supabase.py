@@ -106,9 +106,14 @@ def _write_settled_bets(supabase: Client, rows: list[dict], sport: str) -> int:
 # ---------------------------------------------------------------------------
 
 def get_supabase_client() -> Client:
-    """Creates a Supabase client from environment variables."""
+    """Creates a Supabase client from environment variables.
+
+    Prefers SUPABASE_SERVICE_KEY (bypasses RLS — required after enabling RLS on
+    bet_history).  Falls back to SUPABASE_ANON_KEY for local dev without a
+    service key.
+    """
     url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_ANON_KEY")
+    key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_ANON_KEY")
     if not url or not key:
         raise EnvironmentError(
             "SUPABASE_URL and SUPABASE_ANON_KEY must be set in your .env file."

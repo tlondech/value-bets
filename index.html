@@ -157,10 +157,13 @@
       </button>
       <input id="team-search-mobile" type="text" placeholder="Search team…"
         class="flex-1 min-w-0 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-      <button id="open-legend-btn-mobile" title="How to read this"
-        class="flex-shrink-0 w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-indigo-400 hover:text-indigo-500 transition-colors flex items-center justify-center text-xs font-bold">
-        ?
-      </button>
+      <div class="relative flex-shrink-0">
+        <button class="account-btn w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors flex items-center justify-center" title="Account" aria-label="Account menu">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" d="M12 12a4 4 0 100-8 4 4 0 000 8zm-6.5 8a6.5 6.5 0 1113 0H5.5z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Desktop header row (hidden on mobile) -->
@@ -180,10 +183,13 @@
           <button class="main-tab-btn px-3 py-1.5 text-sm font-medium rounded-lg border-b-2 transition-colors" data-main="bets">Value Bets</button>
           <button class="main-tab-btn px-3 py-1.5 text-sm font-medium rounded-lg border-b-2 transition-colors" data-main="history">History</button>
         </nav>
-        <button id="open-legend-btn" title="How to read this"
-          class="w-5 h-5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-indigo-400 hover:text-indigo-500 transition-colors flex items-center justify-center text-xs font-bold leading-none">
-          ?
-        </button>
+        <div class="relative">
+          <button class="account-btn w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/70 transition-colors flex items-center justify-center" title="Account" aria-label="Account menu">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path fill-rule="evenodd" d="M12 12a4 4 0 100-8 4 4 0 000 8zm-6.5 8a6.5 6.5 0 1113 0H5.5z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -352,192 +358,18 @@
   </button>
 </nav>
 
-<!-- ── Help / Legend modal ───────────────────────────────────── -->
-<div id="legend-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden">
-  <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl w-[90vw] max-w-md max-h-[85vh] flex flex-col">
-
-    <!-- Modal header -->
-    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
-      <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">How to read this</h2>
-      <button id="close-legend-btn" class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 text-lg leading-none">&times;</button>
-    </div>
-
-    <!-- Modal body -->
-    <div class="overflow-y-auto px-5 py-5 space-y-6 text-sm text-gray-500 dark:text-gray-400/90">
-
-      <!-- Football-specific sections -->
-      <div id="legend-football">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Bet Types</p>
-          <div class="space-y-2">
-            <div class="flex justify-between">
-              <span class="text-gray-700 dark:text-gray-300">Home Win / Draw / Away Win</span>
-              <span class="text-gray-400 dark:text-gray-500">1X2 market</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-700 dark:text-gray-300">Over X / Under X</span>
-              <span class="text-gray-400 dark:text-gray-500">Total goals — line varies per event</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-6">
-          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Card Indicators</p>
-          <div class="space-y-3">
-            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-              <span class="text-amber-500 font-medium mt-0.5">⏱ 3d</span>
-              <span>Short rest — team's last match was fewer than 4 days ago. May affect performance.</span>
-            </div>
-            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-              <span class="bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 py-0.5 rounded text-xs mt-0.5 inline-block">H2H</span>
-              <span>Head-to-head history was used to adjust the probability estimate.</span>
-            </div>
-            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-              <span class="bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 py-0.5 rounded text-xs font-semibold mt-0.5 inline-block">2nd Leg</span>
-              <span>Second leg of a knockout tie. Aggregate score shown alongside when available.</span>
-            </div>
-            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-              <span class="flex gap-1 items-center mt-0.5">
-                <span class="bg-green-500 inline-block w-2.5 h-2.5 rounded-full" title="Win"></span>
-                <span class="bg-gray-400 inline-block w-2.5 h-2.5 rounded-full" title="Draw"></span>
-                <span class="bg-red-500 inline-block w-2.5 h-2.5 rounded-full" title="Loss"></span>
-              </span>
-              <span>Recent form — last 5 matches (green&nbsp;W, grey&nbsp;D, red&nbsp;L), oldest on the left.</span>
-            </div>
-            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-              <span class="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-[11px] font-medium shrink-0 mt-0.5 w-max">4th</span>
-              <span>League table rank shown next to the team name.</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tennis-specific sections -->
-      <div id="legend-tennis" class="hidden">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Bet Types</p>
-          <div class="space-y-2">
-            <div class="flex justify-between">
-              <span class="text-gray-700 dark:text-gray-300">Player 1 Win / Player 2 Win</span>
-              <span class="text-gray-400 dark:text-gray-500">Match winner</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-6">
-          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Model</p>
-          <p>Surface-adjusted Elo ratings from the last 5 seasons of ATP/WTA data. Win probability blends overall Elo (40%) with surface-specific Elo (60%) for Hard, Clay, and Grass courts.</p>
-        </div>
-      </div>
-
-      <!-- Basketball-specific sections -->
-      <div id="legend-basketball" class="hidden">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Bet Types</p>
-          <div class="space-y-2">
-            <div class="flex justify-between">
-              <span class="text-gray-700 dark:text-gray-300">Home Win / Away Win</span>
-              <span class="text-gray-400 dark:text-gray-500">Moneyline</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-700 dark:text-gray-300">Over X / Under X</span>
-              <span class="text-gray-400 dark:text-gray-500">Total points — line varies per event</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-gray-700 dark:text-gray-300">Team −X.X / Team +X.X</span>
-              <span class="text-gray-400 dark:text-gray-500">Spread — margin of victory</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-6">
-          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Card Indicators</p>
-          <div class="space-y-3">
-            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-              <span class="flex gap-1 items-center mt-0.5">
-                <span class="bg-green-500 inline-block w-2.5 h-2.5 rounded-full" title="Win"></span>
-                <span class="bg-red-500 inline-block w-2.5 h-2.5 rounded-full" title="Loss"></span>
-              </span>
-              <span>Recent form — last 5 games (green&nbsp;W, red&nbsp;L), oldest on the left. No draws in basketball.</span>
-            </div>
-            <div class="grid grid-cols-[65px_1fr] gap-3 items-start">
-              <span class="text-amber-500 font-medium mt-0.5">⏱ 1d</span>
-              <span>Back-to-back — team played the night before. The model reduces their expected scoring by 2.5 pts.</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-6">
-          <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Model</p>
-          <p>Gaussian efficiency model using rolling team game logs from the current NBA season. Expected scores are derived from each team's home/away attack and defensive ratings, adjusted for home-court advantage (+3.5 pts) and back-to-back fatigue (−2.5 pts). A Normal distribution over the point differential and total drives all three market probabilities.</p>
-        </div>
-      </div>
-
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">EV Colour Coding</p>
-        <div class="space-y-2">
-          <div class="grid grid-cols-[80px_1fr] gap-3 items-start">
-            <span class="ev-success mt-0.5">+8.5%</span>
-            <span>Normal edge — good value bet.</span>
-          </div>
-          <div class="grid grid-cols-[80px_1fr] gap-3 items-start">
-            <span class="ev-warning mt-0.5">+14.2%</span>
-            <span>High edge (&ge;10%) — strong value, verify the odds are still available.</span>
-          </div>
-          <div class="grid grid-cols-[80px_1fr] gap-3 items-start">
-            <span class="ev-danger mt-0.5">+23.1% ⚠</span>
-            <span>Very high edge (&ge;20%) — unusually wide; double-check the line before betting.</span>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">Columns</p>
-        <div class="space-y-2">
-          <div class="flex justify-between">
-            <span class="text-gray-700 dark:text-gray-300">Odds</span>
-            <span class="text-gray-400 dark:text-gray-500">Bookmaker decimal odds</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-700 dark:text-gray-300">Prob</span>
-            <span class="text-gray-400 dark:text-gray-500">Model's true probability</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-700 dark:text-gray-300">EV</span>
-            <span class="text-gray-400 dark:text-gray-500">Edge over the bookmaker</span>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-400/90 dark:text-gray-400/90 mb-3">History Stats</p>
-        <div class="space-y-3">
-          <div class="grid grid-cols-[110px_1fr] gap-3 items-start">
-            <span class="text-gray-700 dark:text-gray-300 font-medium mt-0.5">Total Bets</span>
-            <span>All bets in the current filter, including pending.</span>
-          </div>
-          <div class="grid grid-cols-[110px_1fr] gap-3 items-start">
-            <span class="text-gray-700 dark:text-gray-300 font-medium mt-0.5">Avg Odds · EV</span>
-            <span>Mean decimal odds and mean model edge across all bets in the current view.</span>
-          </div>
-          <div class="grid grid-cols-[110px_1fr] gap-3 items-start">
-            <span class="text-gray-700 dark:text-gray-300 font-medium mt-0.5">Record</span>
-            <span>Settled bets only. Actual wins alongside <span class="text-gray-400 dark:text-gray-500 font-medium">EW</span> (Expected Wins — sum of true probabilities for all settled bets).</span>
-          </div>
-          <div class="grid grid-cols-[110px_1fr] gap-3 items-start">
-            <span class="text-gray-700 dark:text-gray-300 font-medium mt-0.5">Win Rate</span>
-            <span>Settled bets only. <span class="text-green-500 font-medium">Green</span> when actual wins &ge; EW, <span class="text-red-500 font-medium">red</span> when below.</span>
-          </div>
-          <div class="grid grid-cols-[110px_1fr] gap-3 items-start">
-            <span class="text-gray-700 dark:text-gray-300 font-medium mt-0.5">Turnover · P&amp;L · ROI</span>
-            <span>Settled bets only, using tiered stakes: €20 (odds &lt;2), €10 (2–3), €5 (&ge;3). P&amp;L and ROI are <span class="text-green-500 font-medium">green</span> when positive, <span class="text-red-500 font-medium">red</span> when negative.</span>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
+<!-- ── Disclaimer footer ─────────────────────────────────────── -->
+<footer class="mt-8 mb-20 md:mb-8 px-4 max-w-6xl mx-auto">
+  <p class="text-xs text-gray-400 dark:text-gray-600 text-center leading-relaxed">
+    For informational purposes only. Not financial or betting advice. Statistical model outputs do not guarantee profit. Bet responsibly — only stake what you can afford to lose.
+    <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" class="underline hover:text-gray-500">BeGambleAware.org</a>
+  </p>
+  <p class="text-xs text-gray-400 dark:text-gray-600 text-center mt-2">
+    <a href="./privacy.html" class="underline hover:text-gray-500">Privacy Policy</a>
+    <span class="mx-2">·</span>
+    <a href="./terms.html" class="underline hover:text-gray-500">Terms of Service</a>
+  </p>
+</footer>
 
 <script type="module" src="./js/app.js"></script>
 

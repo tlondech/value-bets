@@ -16,6 +16,19 @@ import {
   openBurgerDrawer,
   closeBurgerDrawer,
 } from "./ui.js";
+import {
+  getSession,
+  onAuthStateChange,
+  renderAuthScreen,
+  attachAuthListeners,
+} from "./auth.js";
+import {
+  fetchSubscription,
+  renderPaywall,
+  attachPaywallListeners,
+  renderAccountMenu,
+  attachAccountMenuListeners,
+} from "./billing.js";
 
 // ── Refresh all data ───────────────────────────────────────────
 export async function refreshData() {
@@ -129,6 +142,38 @@ export async function refreshData() {
 
 // ── Init ───────────────────────────────────────────────────────
 async function init() {
+  // ── 1. Auth guard ─────────────────────────────────────────────
+  const session = await getSession();
+  if (!session) {
+    document.body.innerHTML = renderAuthScreen();
+    attachAuthListeners();
+    onAuthStateChange((_event, s) => { if (s) init(); });
+    return;
+  }
+
+  // ── 2. Subscription guard ─────────────────────────────────────
+  const sub = await fetchSubscription(session.user.id);
+  if (!sub || !["active", "trialing"].includes(sub.status)) {
+    document.body.innerHTML = renderPaywall(session);
+    attachPaywallListeners(session);
+    return;
+  }
+
+  // ── 3. Mount account menu on the account icon(s) ──────────────
+  // Two buttons exist (mobile + desktop) but only one is visible at a time.
+  document.querySelectorAll(".account-btn").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const existing = document.getElementById("account-dropdown");
+      if (existing) { existing.remove(); return; }
+      btn.closest("div.relative").insertAdjacentHTML("beforeend", renderAccountMenu(session, sub));
+      attachAccountMenuListeners(session, sub);
+    });
+  });
+  document.addEventListener("click", () => {
+    document.getElementById("account-dropdown")?.remove();
+  });
+
   setMainTab("bets");
 
   // Desktop tab buttons
@@ -145,19 +190,6 @@ async function init() {
       renderHistory();
     });
   });
-
-  // Legend modal
-  const legendModal = document.getElementById("legend-modal");
-  function openLegend() {
-    document.getElementById("legend-football").classList.toggle("hidden", state.activeSport !== "football");
-    document.getElementById("legend-tennis").classList.toggle("hidden", state.activeSport !== "tennis");
-    document.getElementById("legend-basketball").classList.toggle("hidden", state.activeSport !== "basketball");
-    legendModal.classList.remove("hidden");
-  }
-  document.getElementById("open-legend-btn").addEventListener("click", openLegend);
-  document.getElementById("open-legend-btn-mobile").addEventListener("click", openLegend);
-  document.getElementById("close-legend-btn").addEventListener("click", () => legendModal.classList.add("hidden"));
-  legendModal.addEventListener("click", e => { if (e.target === legendModal) legendModal.classList.add("hidden"); });
 
   // Clear filters (desktop)
   document.getElementById("clear-filters-btn").addEventListener("click", () => {
