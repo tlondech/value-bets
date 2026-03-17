@@ -150,6 +150,7 @@ def _evaluate_nba_league(
             "away_rest_days":  away_rest_days,
             "kickoff":         event["commence_time"].isoformat(),
             "sport":           "basketball",
+            "bookmaker_link":  event.get("bookmaker_link"),
             "bets":            filtered_bets,
         })
 
@@ -230,6 +231,7 @@ def _evaluate_tennis_league(
                 "surface":         surface,
                 "kickoff":         event["commence_time"].isoformat(),
                 "sport":           "tennis",
+                "bookmaker_link":  event.get("bookmaker_link"),
                 "bets":            sorted(bets, key=lambda b: b["ev"], reverse=True),
             })
     return value_bets

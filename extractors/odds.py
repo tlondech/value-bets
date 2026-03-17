@@ -119,6 +119,7 @@ class OddsAPIClient:
             "bookmakers": ",".join(sorted(bk_set)),
             "oddsFormat": self.odds_format,
             "dateFormat": "iso",
+            "includeSids": "true",
         }
 
         response = requests.get(url, params=params, timeout=ODDS_API_TIMEOUT)
@@ -239,6 +240,9 @@ class OddsAPIClient:
                 spread_home_odds  = spread_result["home_odds"]
                 spread_away_odds  = spread_result["away_odds"]
 
+        sid = primary_bk.get("sid")
+        bookmaker_link = f"https://www.winamax.fr/paris-sportifs/match/{sid}" if sid else None
+
         return {
             "match_id":          match_id,
             "home_team":         home_team,
@@ -254,6 +258,7 @@ class OddsAPIClient:
             "spread_home_odds":  spread_home_odds,
             "spread_away_odds":  spread_away_odds,
             "bookmaker":         primary_bk["key"],
+            "bookmaker_link":    bookmaker_link,
         }
 
 

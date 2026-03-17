@@ -94,6 +94,7 @@ class BetHistory(Base):
     agg_home          = Column(Integer,  nullable=True)
     agg_away          = Column(Integer,  nullable=True)
     leg1_result       = Column(Text,     nullable=True)    # JSON object
+    bookmaker_link    = Column(String,   nullable=True)
 
     __table_args__ = (
         UniqueConstraint("kickoff", "home_team", "away_team", "outcome",
@@ -124,6 +125,7 @@ def init_db(db_path: str):
             "ALTER TABLE bet_history ADD COLUMN agg_away INTEGER",
             "ALTER TABLE bet_history ADD COLUMN leg1_result TEXT",
             "ALTER TABLE odds ADD COLUMN totals_line REAL",
+            "ALTER TABLE bet_history ADD COLUMN bookmaker_link TEXT",
         ]:
             try:
                 conn.execute(text(col_ddl))

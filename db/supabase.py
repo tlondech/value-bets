@@ -553,6 +553,7 @@ def push_bets_to_supabase(
                 "leg1_result":    m.get("leg1_result"),
                 "team_news":      m.get("team_news"),
                 "sport":          m.get("sport", "football"),
+                "bookmaker_link": m.get("bookmaker_link"),
             })
 
     if not rows:

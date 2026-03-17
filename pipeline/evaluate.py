@@ -237,9 +237,10 @@ def evaluate_matches(
                 "leg1_result":    leg2_context["leg1_result"] if leg2_context else None,
                 "agg_home":       leg2_context["agg_home"]    if leg2_context else None,
                 "agg_away":       leg2_context["agg_away"]    if leg2_context else None,
-                "home_canonical": home_canonical,
-                "away_canonical": away_canonical,
-                "bets":          [],
+                "home_canonical":  home_canonical,
+                "away_canonical":  away_canonical,
+                "bookmaker_link":  event.get("bookmaker_link"),
+                "bets":           [],
             }
 
         _market_groups = [

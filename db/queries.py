@@ -288,9 +288,10 @@ def save_bets_to_history(session, match_bets_list: list[dict], recorded_date: st
                     exists.away_rest_days = m.get("away_rest_days")
                     exists.h2h_used      = m.get("h2h_used")
                     exists.is_second_leg = m.get("is_second_leg")
-                    exists.agg_home      = m.get("agg_home")
-                    exists.agg_away      = m.get("agg_away")
-                    exists.leg1_result   = json.dumps(m["leg1_result"]) if m.get("leg1_result") is not None else None
+                    exists.agg_home        = m.get("agg_home")
+                    exists.agg_away        = m.get("agg_away")
+                    exists.leg1_result     = json.dumps(m["leg1_result"]) if m.get("leg1_result") is not None else None
+                    exists.bookmaker_link  = m.get("bookmaker_link")
                 continue
             session.add(BetHistory(
                 recorded_date=recorded_date,
@@ -320,6 +321,7 @@ def save_bets_to_history(session, match_bets_list: list[dict], recorded_date: st
                 agg_home=m.get("agg_home"),
                 agg_away=m.get("agg_away"),
                 leg1_result=json.dumps(m["leg1_result"]) if m.get("leg1_result") is not None else None,
+                bookmaker_link=m.get("bookmaker_link"),
             ))
             inserted += 1
     return inserted

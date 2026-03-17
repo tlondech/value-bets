@@ -177,6 +177,7 @@ export function groupIntoMatches(rows) {
         agg_away:       row.agg_away,
         leg1_result:    row.leg1_result,
         team_news:      row.team_news || null,
+        bookmaker_link: row.bookmaker_link || null,
         bets: [],
       });
     }
@@ -314,9 +315,16 @@ export function renderCard(m, opts = {}) {
       <td class="py-1.5 text-right text-sm font-semibold">${evLabel(b.ev)}</td>
     </tr>`).join("");
 
+  const bookmakerHref = !showResult
+    ? (m.bookmaker_link || `https://www.winamax.fr/paris-sportifs/search?query=${encodeURIComponent(m.home_team + " " + m.away_team)}`)
+    : null;
+  const headerTag      = bookmakerHref ? "a" : "div";
+  const headerAttr     = bookmakerHref ? `href="${esc(bookmakerHref)}" target="_blank" rel="noopener noreferrer"` : "";
+  const headerHoverCls = bookmakerHref ? "hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group/header" : "";
+
   return `
   <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-    <div class="flex items-start justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
+    <${headerTag} ${headerAttr} class="flex items-start justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700 ${headerHoverCls}">
       <div class="flex flex-wrap items-center gap-2 mr-3">
         ${leagueBadge(m.league_key, badgeText)}
         ${isTennis && m.surface ? surfaceChip(m.surface) : ""}
@@ -326,8 +334,9 @@ export function renderCard(m, opts = {}) {
       <div class="flex items-center gap-2 shrink-0">
         ${score}
         <span class="text-sm font-semibold tabular-nums text-gray-500 dark:text-gray-400">${esc(time)}</span>
+        ${bookmakerHref ? `<svg class="w-3.5 h-3.5 text-gray-400 dark:text-gray-400 group-hover/header:text-indigo-500 dark:group-hover/header:text-indigo-400 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>` : ""}
       </div>
-    </div>
+    </${headerTag}>
     <div class="px-4 py-3 space-y-2">
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-1.5 min-w-0">
