@@ -29,7 +29,7 @@ For each active ATP/WTA tournament (discovered automatically each run):
 
 Elo ratings are computed once per run and shared across all tournaments for the same tour (ATP or WTA).
 
-**Settlement:** Completed match results are fetched from The Odds API `/v4/sports/{sport}/scores/` endpoint (real-time, works mid-tournament). For tournaments that have fully concluded and dropped off the Odds API, the fallback source is tennis-data.co.uk CSV files.
+**Settlement:** Completed match results are sourced from tennis-data.co.uk CSV files, published after each tournament concludes. Bets from in-progress tournaments settle automatically once the CSV becomes available.
 
 ### NBA basketball pipeline
 
@@ -114,7 +114,7 @@ The report opens automatically in your browser.
 
 ## Automated Daily Updates
 
-A GitHub Actions workflow (`.github/workflows/daily_update.yml`) runs `python main.py --fetch` nine times a day at **06:07, 08:07, 10:07, 12:07, 14:07, 16:07, 18:07, 20:07, and 22:07 UTC** (every 2 hours). It writes bet recommendations directly to Supabase; the frontend reads from Supabase at load time, so no file is committed on each run.
+A GitHub Actions workflow (`.github/workflows/daily_update.yml`) runs `python main.py --fetch` five times a day at **10:07, 13:07, 16:07, 19:07, and 22:07 UTC** (every 3 hours). It writes bet recommendations directly to Supabase; the frontend reads from Supabase at load time, so no file is committed on each run.
 
 The only files the workflow ever commits are the three crest map JSONs (`data/football_crest_map.json`, `data/tennis_crest_map.json`, `data/nba_crest_map.json`) — and only when they actually change (new teams or players detected).
 
@@ -182,10 +182,10 @@ All settings can be overridden via `.env`:
 │   └── config.js                    # Supabase client (ESM CDN build)
 │
 ├── .github/workflows/
-│   └── daily_update.yml             # Runs every 6 hours, auto-commits index.html
+│   └── daily_update.yml             # Runs every 3 hours (10:00–22:00 UTC), auto-commits crest maps
 │
 ├── extractors/
-│   ├── odds.py                      # The Odds API client (1X2, O/U, spreads, tennis discovery, scores)
+│   ├── odds.py                      # The Odds API client (1X2, O/U, spreads, tennis discovery)
 │   ├── nba_data_client.py           # NBA Stats API client (game logs, recent results)
 │   ├── tennis_data_client.py        # Jeff Sackmann ATP/WTA historical data client
 │   ├── footballdata_client.py       # football-data.co.uk CSV client (domestic leagues)
