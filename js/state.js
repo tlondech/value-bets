@@ -11,6 +11,7 @@ export const state = {
   // ── Data ────────────────────────────────────────────────────
   signalsData: [],
   histData: [],
+  pendingData: [],
 
   // ── Filters ─────────────────────────────────────────────────
   activeSport:       "football",   // "football" | "basketball" | "tennis"

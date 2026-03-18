@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { fetchHistoryPage } from "./api.js";
+import { fetchHistoryPage, fetchPendingSignals } from "./api.js";
 
 // ── Info tooltip helper ────────────────────────────────────────
 function infoIcon(text) {
@@ -799,6 +799,7 @@ export function renderHistory() {
     settled: allRows.length,
     won:     allRows.filter(r => r._status === "won").length,
     lost:    allRows.filter(r => r._status === "lost").length,
+    pending: state.pendingData.length,
   };
 
   document.querySelectorAll(".hist-status-btn").forEach(btn => {
@@ -806,13 +807,16 @@ export function renderHistory() {
     btn.className = isActive
       ? "hist-status-btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400"
       : "hist-status-btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors bg-white border border-gray-200 text-gray-600 dark:bg-gray-900 dark:border-gray-800 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700";
-    const label = { settled: "Settled", won: "Won", lost: "Lost" }[btn.dataset.status];
+    const label = { settled: "Settled", won: "Won", lost: "Lost", pending: "Pending" }[btn.dataset.status];
     const n = tabCounts[btn.dataset.status] ?? 0;
     btn.innerHTML = `${label} <span class="text-xs opacity-60">(${n})</span>`;
   });
 
-  const visible = state.histStatusFilter === "settled" ? allRows
-                : allRows.filter(r => r._status === state.histStatusFilter);
+  const visible = state.histStatusFilter === "pending"
+                ? state.pendingData.map(r => ({ ...r, _status: "pending" }))
+                : state.histStatusFilter === "settled"
+                  ? allRows
+                  : allRows.filter(r => r._status === state.histStatusFilter);
 
   updateStatsGrid(allRows);
 
@@ -921,10 +925,11 @@ export async function resetHistoryPagination() {
   state.historyFetching = false;
   const sentinel = document.getElementById("history-sentinel");
   if (state.historyObserver && sentinel) state.historyObserver.observe(sentinel);
-  const { data, count } = await fetchHistoryPage(0);
+  const [{ data, count }, pendingResult] = await Promise.all([fetchHistoryPage(0), fetchPendingSignals()]);
   state.historyTotal  = count;
   state.historyLoaded = data;
   state.histData      = state.historyLoaded;
+  state.pendingData   = pendingResult;
   renderHistory();
   updateHistoryCountUI();
 }

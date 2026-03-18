@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { fetchSignals, fetchHistoryPage } from "./api.js";
+import { fetchSignals, fetchHistoryPage, fetchPendingSignals } from "./api.js";
 import {
   relativeDate,
   setMainTab,
@@ -38,11 +38,12 @@ export async function refreshData() {
     state.historyLoaded   = [];
     state.historyFetching = false;
 
-    const [signalsResult, histResult] = await Promise.all([fetchSignals(), fetchHistoryPage(0)]);
+    const [signalsResult, histResult, pendingResult] = await Promise.all([fetchSignals(), fetchHistoryPage(0), fetchPendingSignals()]);
     state.signalsData   = signalsResult;
     state.historyTotal  = histResult.count;
     state.historyLoaded = histResult.data;
     state.histData      = state.historyLoaded;
+    state.pendingData   = pendingResult;
 
     // Re-observe sentinel in case it was unobserved when all pages were loaded
     const sentinel = document.getElementById("history-sentinel");
