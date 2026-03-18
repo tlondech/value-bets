@@ -30,6 +30,7 @@ from constants import LOCAL_REPORT_URL
 from db.queries import prune_stale_signals, save_signals_to_history
 from db.schema import init_db
 from db.supabase import (
+    backfill_tennis_scores,
     get_supabase_client,
     prune_stale_supabase_signals,
     push_signals_to_supabase,
@@ -171,7 +172,8 @@ def _settle_all(supabase, cfg, all_raw_fixtures: list[dict], name_map: dict, for
 
     tennis_keys = [lg.key for lg in cfg.enabled_leagues if lg.sport_type == "tennis"]
     if tennis_keys:
-        settle_tennis_supabase_signals(supabase, tennis_keys)
+        settle_tennis_supabase_signals(supabase)
+        backfill_tennis_scores(supabase)
 
     nba_keys = [lg.key for lg in cfg.enabled_leagues if lg.sport_type == "basketball"]
     if nba_keys:
@@ -210,8 +212,8 @@ def run_pipeline(force_fetch: bool = False, dry_run: bool = False) -> None:
     name_map = load_team_name_map(cfg.team_map_path)
 
     _init_tennis(cfg)
-    _init_nba(cfg)
     _log_enabled_leagues(cfg)
+    _init_nba(cfg)
 
     supabase = get_supabase_client()
 

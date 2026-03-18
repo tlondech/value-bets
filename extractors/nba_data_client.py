@@ -6,20 +6,17 @@ Falls back to an on-disk CSV cache written after every successful fetch.
 """
 
 import logging
-import time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-import requests
 import pandas as pd
+
+from extractors.espn_client import ESPNClient
 
 logger = logging.getLogger(__name__)
 
 # Cache — committed to the repo so runs without network access still have data
 _CACHE_PATH = Path(__file__).parent.parent / "data" / "nba_game_logs_cache.csv"
-
-# ESPN public API base — no key, no IP restrictions
-_ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
 
 
 class NBADataClient:
@@ -115,6 +112,7 @@ def _fetch_from_espn(season: str) -> pd.DataFrame:
     )
     logger.debug("ESPN _fetch_from_espn: season_year=%d, %d months planned", season_year, len(months))
 
+    client   = ESPNClient()
     all_rows: list[dict] = []
     seen: set[tuple]     = set()
 
@@ -124,20 +122,11 @@ def _fetch_from_espn(season: str) -> pd.DataFrame:
             break
 
         last_day   = cal.monthrange(year, month)[1]
-        date_range = f"{year}{month:02d}01-{year}{month:02d}{last_day:02d}"
+        start_dt   = date(year, month, 1)
+        end_dt     = date(year, month, last_day)
+        date_range = f"{year}{month:02d}01-{year}{month:02d}{last_day:02d}"  # for logging
 
-        try:
-            time.sleep(0.3)
-            r = requests.get(
-                f"{_ESPN_BASE}/scoreboard",
-                params={"dates": date_range, "limit": 500},
-                timeout=15,
-            )
-            r.raise_for_status()
-            events = r.json().get("events", [])
-        except Exception as exc:
-            logger.warning("ESPN scoreboard fetch failed for %s: %s", date_range, exc)
-            continue
+        events = client.fetch_scoreboard("basketball", "nba", start_dt, end_dt)
 
         completed = 0
         skipped   = 0
@@ -211,65 +200,50 @@ def _fetch_from_espn(season: str) -> pd.DataFrame:
 
 def _fetch_recent_from_espn(days_back: int) -> list[dict]:
     """Fetches completed games from the last `days_back` days via ESPN scoreboard."""
-    now    = datetime.now(timezone.utc)
-    dates  = [(now - timedelta(days=i)).strftime("%Y%m%d") for i in range(days_back)]
+    today = datetime.now(timezone.utc).date()
+    start = today - timedelta(days=days_back)
+
+    logger.debug("ESPN _fetch_recent_from_espn: fetching %s to %s", start, today)
+
+    events = ESPNClient().fetch_scoreboard("basketball", "nba", start, today, limit=500)
     result = []
     seen: set[tuple] = set()
 
-    logger.debug("ESPN _fetch_recent_from_espn: querying %d dates (%s … %s)", len(dates), dates[-1], dates[0])
-
-    for d in dates:
-        try:
-            r = requests.get(
-                f"{_ESPN_BASE}/scoreboard",
-                params={"dates": d, "limit": 50},
-                timeout=15,
-            )
-            r.raise_for_status()
-            events = r.json().get("events", [])
-        except Exception as exc:
-            logger.debug("ESPN scoreboard fetch failed for %s: %s", d, exc)
+    for event in events:
+        comps = event.get("competitions")
+        if not comps:
+            continue
+        comp = comps[0]
+        if not comp.get("status", {}).get("type", {}).get("completed"):
             continue
 
-        day_count = 0
-        for event in events:
-            comps = event.get("competitions")
-            if not comps:
-                continue
-            comp = comps[0]
-            if not comp.get("status", {}).get("type", {}).get("completed"):
-                continue
+        competitors = comp.get("competitors", [])
+        home = next((c for c in competitors if c["homeAway"] == "home"), None)
+        away = next((c for c in competitors if c["homeAway"] == "away"), None)
+        if not home or not away:
+            continue
 
-            competitors = comp.get("competitors", [])
-            home = next((c for c in competitors if c["homeAway"] == "home"), None)
-            away = next((c for c in competitors if c["homeAway"] == "away"), None)
-            if not home or not away:
-                continue
+        try:
+            home_pts = int(home["score"])
+            away_pts = int(away["score"])
+        except (KeyError, ValueError, TypeError):
+            continue
 
-            try:
-                home_pts = int(home["score"])
-                away_pts = int(away["score"])
-            except (KeyError, ValueError, TypeError):
-                continue
+        game_date = datetime.strptime(event["date"][:10], "%Y-%m-%d").date()
+        home_team = home["team"]["displayName"]
+        away_team = away["team"]["displayName"]
+        key       = (game_date, home_team, away_team)
+        if key in seen:
+            continue
+        seen.add(key)
 
-            game_date = datetime.strptime(event["date"][:10], "%Y-%m-%d").date()
-            home_team = home["team"]["displayName"]
-            away_team = away["team"]["displayName"]
-            key       = (game_date, home_team, away_team)
-            if key in seen:
-                continue
-            seen.add(key)
-            day_count += 1
-
-            result.append({
-                "home_team": home_team,
-                "away_team": away_team,
-                "home_pts":  home_pts,
-                "away_pts":  away_pts,
-                "game_date": game_date,
-            })
-
-        logger.debug("ESPN scoreboard %s: %d completed games", d, day_count)
+        result.append({
+            "home_team": home_team,
+            "away_team": away_team,
+            "home_pts":  home_pts,
+            "away_pts":  away_pts,
+            "game_date": game_date,
+        })
 
     logger.debug("ESPN recent results total: %d games over %d days", len(result), days_back)
     return result
