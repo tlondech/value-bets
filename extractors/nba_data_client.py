@@ -16,9 +16,27 @@ logger = logging.getLogger(__name__)
 
 # NBA Stats API enforces ~1 req/sec; sleep between calls to avoid 429s
 _REQUEST_SLEEP = 0.6
+_REQUEST_TIMEOUT = 60  # stats.nba.com is slow from cloud IPs
+_MAX_RETRIES = 3
 
 # League ID for NBA
 _NBA_LEAGUE_ID = "00"
+
+# stats.nba.com blocks requests without browser-like headers (especially from CI)
+_NBA_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Referer": "https://www.nba.com/",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "x-nba-stats-origin": "stats",
+    "x-nba-stats-token": "true",
+    "Origin": "https://www.nba.com",
+    "Host": "stats.nba.com",
+}
 
 
 class NBADataClient:
@@ -54,24 +72,34 @@ class NBADataClient:
             season_types.append("Playoffs")
 
         for season_type in season_types:
-            try:
-                time.sleep(_REQUEST_SLEEP)
-                finder = leaguegamefinder.LeagueGameFinder(
-                    league_id_nullable=_NBA_LEAGUE_ID,
-                    season_nullable=season,
-                    season_type_nullable=season_type,
-                )
-                df = finder.get_data_frames()[0]
-                if not df.empty:
-                    all_frames.append(df)
-                    logger.debug(
-                        "NBA %s %s: %d game rows fetched",
-                        season, season_type, len(df),
+            for attempt in range(_MAX_RETRIES):
+                try:
+                    time.sleep(_REQUEST_SLEEP * (2 ** attempt))
+                    finder = leaguegamefinder.LeagueGameFinder(
+                        league_id_nullable=_NBA_LEAGUE_ID,
+                        season_nullable=season,
+                        season_type_nullable=season_type,
+                        timeout=_REQUEST_TIMEOUT,
+                        headers=_NBA_HEADERS,
                     )
-            except Exception as exc:
-                logger.warning(
-                    "NBA fetch failed for %s %s: %s", season, season_type, exc
-                )
+                    df = finder.get_data_frames()[0]
+                    if not df.empty:
+                        all_frames.append(df)
+                        logger.debug(
+                            "NBA %s %s: %d game rows fetched",
+                            season, season_type, len(df),
+                        )
+                    break
+                except Exception as exc:
+                    if attempt < _MAX_RETRIES - 1:
+                        logger.debug(
+                            "NBA fetch attempt %d/%d failed for %s %s, retrying: %s",
+                            attempt + 1, _MAX_RETRIES, season, season_type, exc,
+                        )
+                    else:
+                        logger.warning(
+                            "NBA fetch failed for %s %s: %s", season, season_type, exc
+                        )
 
         if not all_frames:
             return pd.DataFrame()
@@ -97,16 +125,28 @@ class NBADataClient:
         date_from = (now - timedelta(days=days_back)).strftime("%m/%d/%Y")
         date_to = now.strftime("%m/%d/%Y")
 
-        try:
-            time.sleep(_REQUEST_SLEEP)
-            finder = leaguegamefinder.LeagueGameFinder(
-                league_id_nullable=_NBA_LEAGUE_ID,
-                date_from_nullable=date_from,
-                date_to_nullable=date_to,
-            )
-            df = finder.get_data_frames()[0]
-        except Exception as exc:
-            logger.warning("NBA recent results fetch failed: %s", exc)
+        df = None
+        for attempt in range(_MAX_RETRIES):
+            try:
+                time.sleep(_REQUEST_SLEEP * (2 ** attempt))
+                finder = leaguegamefinder.LeagueGameFinder(
+                    league_id_nullable=_NBA_LEAGUE_ID,
+                    date_from_nullable=date_from,
+                    date_to_nullable=date_to,
+                    timeout=_REQUEST_TIMEOUT,
+                    headers=_NBA_HEADERS,
+                )
+                df = finder.get_data_frames()[0]
+                break
+            except Exception as exc:
+                if attempt < _MAX_RETRIES - 1:
+                    logger.debug(
+                        "NBA recent results fetch attempt %d/%d failed, retrying: %s",
+                        attempt + 1, _MAX_RETRIES, exc,
+                    )
+                else:
+                    logger.warning("NBA recent results fetch failed: %s", exc)
+        if df is None:
             return []
 
         if df.empty:

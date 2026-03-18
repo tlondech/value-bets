@@ -131,11 +131,21 @@ function leagueBadge(key, name) {
   }
   return `<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${cls}">${esc(name)}</span>`;
 }
-function surfaceChip(surface) {
-  const cls = surface === "Clay"  ? "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300"
-            : surface === "Grass" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-            :                       "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300";
-  return `<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${cls}">${esc(surface)}</span>`;
+
+function tennisCircuitChip(leagueKey) {
+  const isATP = leagueKey.startsWith("tennis_atp_");
+  const label = isATP ? "ATP" : "WTA";
+  const cls   = isATP ? "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300"
+                      : "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300";
+  return `<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${cls}">${label}</span>`;
+}
+function tennisTournamentChip(name, surface) {
+  const cleanName = name.replace(/^(ATP|WTA)\s+/i, "").trim();
+  const text = surface ? `${cleanName} · ${surface}` : cleanName;
+  const cls  = surface === "Clay"  ? "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300"
+             : surface === "Grass" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+             :                       "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300";
+  return `<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${cls}">${esc(text)}</span>`;
 }
 function formBubbles(form) {
   if (!Array.isArray(form) || form.length === 0) return "";
@@ -331,8 +341,7 @@ export function renderCard(m, opts = {}) {
   <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
     <${headerTag} ${headerAttr} class="flex items-start justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700 ${headerHoverCls}">
       <div class="flex flex-wrap items-center gap-2 mr-3">
-        ${leagueBadge(m.league_key, badgeText)}
-        ${isTennis && m.surface ? surfaceChip(m.surface) : ""}
+        ${isTennis ? `${tennisCircuitChip(m.league_key)}${tennisTournamentChip(m.league_name, m.surface)}` : leagueBadge(m.league_key, badgeText)}
         ${m.is_second_leg ? `<span class="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded font-semibold whitespace-nowrap flex items-center gap-1">2nd Leg ${m.agg_home != null ? '<span class="opacity-70 font-normal">| Agg ' + m.agg_home + "–" + m.agg_away + "</span>" : ""}</span>` : ""}
         ${m.h2h_used ? `<span class="text-xs bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 rounded">H2H</span>` : ""}
       </div>
