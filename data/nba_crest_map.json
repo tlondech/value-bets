@@ -1,5 +1,5 @@
 {
-  "_meta": "NBA team logo URLs from the official NBA CDN, keyed by nba_api TEAM_ABBREVIATION.",
+  "_meta": "NBA team logo URLs from the official NBA CDN, keyed by ESPN TEAM_ABBREVIATION.",
   "ATL": "https://cdn.nba.com/logos/nba/1610612737/primary/L/logo.svg",
   "BOS": "https://cdn.nba.com/logos/nba/1610612738/primary/L/logo.svg",
   "BKN": "https://cdn.nba.com/logos/nba/1610612751/primary/L/logo.svg",

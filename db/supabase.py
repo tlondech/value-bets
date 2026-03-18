@@ -310,11 +310,11 @@ def settle_nba_supabase_signals(
     name_map: dict[str, dict[str, str]] | None = None,
 ) -> int:
     """
-    Settles unsettled NBA signals in Supabase using nba_api game results.
+    Settles unsettled NBA signals in Supabase using ESPN game results.
 
     Uses team_name_map.json["nba"] to normalise both sides to abbreviations
     (e.g. "LA Clippers" and "Los Angeles Clippers" both → "LAC"), so matching
-    is robust to display-name differences between the odds source and nba_api.
+    is robust to display-name differences between the odds source and ESPN.
 
     Only attempts settlement for games that started more than NBA_LIVE_MATCH_WINDOW_HOURS
     ago to ensure the game has actually finished (overtime, TV timeouts, etc.).
@@ -357,7 +357,7 @@ def settle_nba_supabase_signals(
         return 0
 
     # Build abbreviation lookup from team_name_map["nba"] so that both the
-    # odds-source name ("Los Angeles Clippers") and the nba_api name ("LA Clippers")
+    # odds-source name ("Los Angeles Clippers") and the ESPN name ("LA Clippers")
     # resolve to the same abbreviation ("LAC") for matching.
     nba_abbr: dict[str, str] = {}
     if name_map:

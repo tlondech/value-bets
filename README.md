@@ -34,7 +34,7 @@ Elo ratings are computed once per run and shared across all tournaments for the 
 ### NBA basketball pipeline
 
 1. **Fetches live odds** from The Odds API (Winamax lines), including spreads/handicap market
-2. **Downloads team game logs** from the NBA Stats API via the `nba_api` package (no API key required) — current season
+2. **Downloads team game logs** from the ESPN public API (no API key required) — current season
 3. **Computes team efficiency ratings** per team: rolling average of points scored (attack) and points allowed (defense), with separate home/away splits; stores each team's most recent game date for fatigue detection
 4. **Predicts expected scores** using the Gaussian efficiency model:
    ```
@@ -339,5 +339,5 @@ On every run, unsettled future signals that are no longer in the detected set ar
 | [football-data.org](https://www.football-data.org) | Champions League fixtures and results | Free tier available |
 | [Jeff Sackmann / tennis_atp](https://github.com/JeffSackmann/tennis_atp) | ATP historical match data for Elo | Free (GitHub) |
 | [Jeff Sackmann / tennis_wta](https://github.com/JeffSackmann/tennis_wta) | WTA historical match data for Elo | Free (GitHub) |
-| [NBA Stats API](https://www.nba.com/stats) | NBA team game logs (via `nba_api`) | Free |
+| [ESPN public API](https://site.api.espn.com) | NBA team game logs | Free |
 | [NewsAPI](https://newsapi.org) | Team news and injury context (optional) | 100 req/day free tier |

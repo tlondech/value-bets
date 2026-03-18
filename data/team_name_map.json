@@ -482,7 +482,7 @@
     "West Ham United FC": "West Ham"
   },
   "nba": {
-    "_meta": "Maps Winamax / The Odds API NBA team display names to nba_api TEAM_ABBREVIATION. Right-hand values must match nba_api team abbreviations exactly.",
+    "_meta": "Maps Winamax / The Odds API NBA team display names to ESPN TEAM_ABBREVIATION.",
     "Atlanta Hawks": "ATL",
     "Boston Celtics": "BOS",
     "Brooklyn Nets": "BKN",

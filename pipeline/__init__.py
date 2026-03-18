@@ -36,7 +36,7 @@ def _load_nba_crest_map(path: str) -> dict[str, str]:
 
 
 def _resolve_nba_team(winamax_name: str, name_map: dict) -> str | None:
-    """Maps a Winamax NBA team display name to an nba_api abbreviation."""
+    """Maps a Winamax NBA team display name to a team abbreviation."""
     return name_map.get("nba", {}).get(winamax_name)
 
 
