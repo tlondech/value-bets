@@ -471,7 +471,7 @@ export function renderDatePills() {
   });
 }
 
-// ── Bet-type pills ─────────────────────────────────────────────
+// ── Signal-type pills ─────────────────────────────────────────
 export function renderSignalTypePills() {
   const container = document.getElementById("signal-type-pills");
   const section   = container.closest("div[class]");
@@ -514,7 +514,7 @@ export function renderBurgerDrawerPills() {
       });
     });
   }
-  // Bet type
+  // Signal type
   const btSrc  = document.getElementById("signal-type-pills");
   const btDest = document.getElementById("signal-type-pills-mobile");
   if (btSrc && btDest) {

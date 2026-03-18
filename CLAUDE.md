@@ -1,7 +1,7 @@
 # CLAUDE.md — Signal Engine
 
 ## Project overview
-Statistical value-bet finder for football, tennis, and NBA. Fetches live Winamax odds via The Odds API, runs sport-specific predictive models, and surfaces bets where EV > threshold. Results are stored in Supabase and displayed in a plain-HTML/ES-module SPA.
+Statistical signal finder for football, tennis, and NBA. Fetches live Winamax odds via The Odds API, runs sport-specific predictive models, and surfaces bets where EV > threshold. Results are stored in Supabase and displayed in a plain-HTML/ES-module SPA.
 
 ## Key entry points
 - `main.py` — pipeline orchestrator; CLI: `python main.py [--fetch] [--dry-run] [--debug]`

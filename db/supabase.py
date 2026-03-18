@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def _settle_totals(outcome: str, hg: int, ag: int) -> bool | None:
     """Parse a dynamic totals outcome string and determine if it won.
 
-    When the line is a whole number the actual bet placed is on the nearest
+    When the line is a whole number the actual signal placed is on the nearest
     available half-point: over_234_0 → over_233_5, under_234_0 → under_234_5.
     The adjusted line is then settled with the standard half-point logic.
 
@@ -28,7 +28,7 @@ def _settle_totals(outcome: str, hg: int, ag: int) -> bool | None:
         "under_3_5"   → line=3.5  → won if hg+ag <= 3
         "over_234_0"  → line=233.5 → won if hg+ag > 233  (i.e. >= 234)
         "under_234_0" → line=234.5 → won if hg+ag <= 234
-    Returns None if the outcome string is not a totals bet.
+    Returns None if the outcome string is not a totals signal.
     """
     if not outcome.startswith(("over_", "under_")):
         return None

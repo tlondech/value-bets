@@ -1,6 +1,6 @@
-# Value Bet Finder — Football, Tennis & Basketball
+# Signal Arena — Football, Tennis & Basketball
 
-A statistical signal engine that identifies value bets across professional football, tennis, and NBA basketball. It fetches live odds from The Odds API (Winamax lines), models outcomes using sport-specific predictive models, and surfaces bets where the bookmaker's implied probability is lower than the model's estimate.
+A statistical signal engine that identifies +EV opportunities across professional football, tennis, and NBA basketball. It fetches live odds from The Odds API (Winamax lines), models outcomes using sport-specific predictive models, and surfaces signals where the bookmaker's implied probability is lower than the model's estimate.
 
 ## How It Works
 
@@ -13,8 +13,8 @@ For each upcoming match across supported leagues:
 3. **Builds team ratings** using a Dixon-Coles MLE model (with rolling-window fallback), blended with head-to-head stats
 4. **Computes expected goals** (λ) per team, adjusted for fatigue, rest days, and UCL second-leg aggregate dynamics
 5. **Builds a score probability matrix** via Poisson distribution with Dixon-Coles low-score correction
-6. **Calculates Expected Value** (EV = true_prob × decimal_odds − 1) for each outcome; caps the model/implied probability ratio to filter out hallucinated high-EV bets; surfaces only the best bet per market group (1X2, O/U)
-7. **Fetches team news** (optional) — for bets with EV ≥ 20% within 24h of kickoff, pulls injury/suspension context from NewsAPI using rule-based sentence extraction
+6. **Calculates Expected Value** (EV = true_prob × decimal_odds − 1) for each outcome; caps the model/implied probability ratio to filter out hallucinated high-EV signals; surfaces only the highest-EV signal per market group (1X2, O/U)
+7. **Fetches team news** (optional) — for signals with EV ≥ 20% within 24h of kickoff, pulls injury/suspension context from NewsAPI using rule-based sentence extraction
 
 ### Tennis pipeline
 
@@ -29,7 +29,7 @@ For each active ATP/WTA tournament (discovered automatically each run):
 
 Elo ratings are computed once per run and shared across all tournaments for the same tour (ATP or WTA).
 
-**Settlement:** Completed match results are sourced from tennis-data.co.uk CSV files, published after each tournament concludes. Bets from in-progress tournaments settle automatically once the CSV becomes available.
+**Settlement:** Completed match results are sourced from tennis-data.co.uk CSV files, published after each tournament concludes. Signals from in-progress tournaments settle automatically once the CSV becomes available.
 
 ### NBA basketball pipeline
 
@@ -43,7 +43,7 @@ Elo ratings are computed once per run and shared across all tournaments for the 
    ```
 5. **Applies back-to-back fatigue adjustment**: teams with ≤1 day of rest since their last game have their expected score reduced by 2.5 pts; flagged with ⏱ in the report
 6. **Calculates win, O/U, and spread cover probabilities** from a Normal distribution over the point differential and total
-7. **Calculates Expected Value** using the same formula as other sports; surfaces the best EV bet per market group (moneyline, totals, spreads)
+7. **Calculates Expected Value** using the same formula as other sports; surfaces the highest-EV signal per market group (moneyline, totals, spreads)
 
 Team ratings are computed once per run. Games currently in progress (within a 3.5-hour live window to account for overtime) are skipped.
 
@@ -150,13 +150,13 @@ All settings can be overridden via `.env`:
 | `FOOTBALL_DATA_ORG_API_KEY` | `""` | football-data.org key (required for UCL) |
 | `SUPABASE_URL` | — | Supabase project URL (required) |
 | `SUPABASE_ANON_KEY` | — | Supabase project anon key (required) |
-| `NEWS_API_KEY` | `""` | NewsAPI key (optional — enables team news for EV ≥ 20% bets within 24h of kickoff) |
+| `NEWS_API_KEY` | `""` | NewsAPI key (optional — enables team news for signals with EV ≥ 20% within 24h of kickoff) |
 | `ENABLED_LEAGUES` | all | Comma-separated league keys, e.g. `epl,laliga,nba` (tennis is always auto-discovered) |
-| `EV_THRESHOLD` | `0.05` | Minimum EV to surface a bet (5%) |
+| `EV_THRESHOLD` | `0.05` | Minimum EV to surface a signal (5%) |
 | `ROLLING_WINDOW` | `5` | Number of recent matches for rolling stats (football); doubled for NBA |
 | `POISSON_MAX_GOALS` | `8` | Score matrix size (0–N goals) (football) |
 | `ODDS_TOTALS_BOOKMAKERS` | `""` | Fallback bookmaker for O/U when Winamax has no totals line, e.g. `pinnacle` |
-| `NBA_MIN_GAMES` | `10` | Minimum games a team must have played to generate bets |
+| `NBA_MIN_GAMES` | `10` | Minimum games a team must have played to generate signals |
 | `NBA_HOME_ADVANTAGE` | `3.5` | Home court advantage in points |
 | `NBA_SPREAD_STD` | `15.5` | Std dev of point differential (Normal distribution) |
 | `NBA_TOTAL_STD` | `19.0` | Std dev of total points (Normal distribution) |
@@ -177,7 +177,7 @@ All settings can be overridden via `.env`:
 ├── js/                              # ES module frontend (no bundler required)
 │   ├── app.js                       # Entry point: init(), refreshData(), event wiring, IIFEs
 │   ├── ui.js                        # All rendering, filter chips, drawer/tab/pill logic
-│   ├── api.js                       # fetchBets(), fetchHistoryPage() — Supabase queries
+│   ├── api.js                       # fetchSignals(), fetchHistoryPage() — Supabase queries
 │   ├── state.js                     # Centralised mutable state object (single source of truth)
 │   └── config.js                    # Supabase client (ESM CDN build)
 │
@@ -192,7 +192,7 @@ All settings can be overridden via `.env`:
 │   ├── footballdataorg_client.py    # football-data.org API client (UCL)
 │   ├── soccerdata_client.py         # Alternative data source
 │   ├── stats.py                     # Stats processing utilities
-│   └── team_news.py                 # NewsAPI client — injury/suspension context for high-EV bets
+│   └── team_news.py                 # NewsAPI client — injury/suspension context for high-EV signals
 │
 ├── models/
 │   ├── features.py                  # Feature engineering (Dixon-Coles, H2H, fatigue)
@@ -208,7 +208,7 @@ All settings can be overridden via `.env`:
 │   └── settlement.py                # Dual-source football settlement (football-data.org + .co.uk)
 │
 ├── db/
-│   ├── schema.py                    # SQLAlchemy models (matches, odds, fixtures, bet_history)
+│   ├── schema.py                    # SQLAlchemy models (matches, odds, fixtures, signal_history)
 │   ├── queries.py                   # SQLite read/write helpers
 │   └── supabase.py                  # Supabase client — remote persistence, settlement, pruning
 │
@@ -225,7 +225,7 @@ All settings can be overridden via `.env`:
     ├── football_crest_map.json      # Football team crest URLs
     ├── tennis_crest_map.json        # Tennis player flag URLs (auto-updated each run)
     ├── nba_crest_map.json           # NBA team logo URLs (NBA CDN)
-    └── bets.db                      # SQLite database
+    └── signals.db                   # SQLite database
 ```
 
 ---
@@ -243,9 +243,9 @@ When fewer than 10 fixtures are available, the model falls back to rolling-windo
 - **Fatigue:** Teams with <4 days since their last match concede 8% more goals
 - **UCL second legs:** Trailing teams receive an attack boost proportional to their goal deficit; leading teams receive a slight defensive orientation
 
-**Bet filtering:**
-- **Probability ratio cap:** Bets are dropped when `model_prob / implied_prob > 1.3` (1.4 for UCL)
-- **Market-group deduplication:** Only the single highest-EV outcome per market group (1X2, O/U) is surfaced
+**Signal filtering:**
+- **Probability ratio cap:** Signals are dropped when `model_prob / implied_prob > 1.3` (1.4 for UCL)
+- **Market-group deduplication:** Only the single highest-EV signal per market group (1X2, O/U) is surfaced
 
 ### Tennis — Surface-Adjusted Elo
 
@@ -287,10 +287,10 @@ NBA games can run 3h+ (including overtime), so the live detection window is 3.5 
 EV = (model_probability × decimal_odds) − 1
 ```
 
-A positive EV indicates the model estimates a higher probability than the bookmaker's implied odds. Bets are only surfaced when EV > threshold (default 5%).
+A positive EV indicates the model estimates a higher probability than the bookmaker's implied odds. Signals are only surfaced when EV > threshold (default 5%).
 
 ### Team News Enrichment (football only)
-When `NEWS_API_KEY` is set, the pipeline fetches recent articles from NewsAPI for both teams in high-EV football matches (EV ≥ 20%) scheduled within the next 24 hours. A rule-based extractor surfaces the top injury and suspension sentences per team — no LLM required.
+When `NEWS_API_KEY` is set, the pipeline fetches recent articles from NewsAPI for both teams in high-EV football signals (EV ≥ 20%) scheduled within the next 24 hours. A rule-based extractor surfaces the top injury and suspension sentences per team — no LLM required.
 
 ---
 
@@ -301,32 +301,32 @@ When `NEWS_API_KEY` is set, the pipeline fetches recent articles from NewsAPI fo
 Interactive SPA dashboard — frontend logic lives in `js/` as plain ES modules (no bundler).
 
 **Content:**
-- Value bets grouped by date/league, with odds, true probability, and EV
+- Signals grouped by date/league, with odds, true probability, and EV
 - Team form, standings position, rest days (football)
 - Team form and logos (basketball)
 - Player flag icons (tennis)
 - UCL aggregate context for second legs
-- Team news (injury/suspension context) for high-EV football bets near kickoff (requires `NEWS_API_KEY`)
-- Bet history with won/lost outcomes, stats grid (record, win rate, P&L/ROI), infinite scroll
+- Team news (injury/suspension context) for high-EV football signals near kickoff (requires `NEWS_API_KEY`)
+- Signal history with won/lost outcomes, stats grid (record, win rate, P&L/ROI), infinite scroll
 - Removable active-filter chips
 
 **Mobile layout (< 768 px):**
 - Slim top bar — burger menu (left), team search (centre), legend `?` (right)
-- Left-side burger drawer with league, bet-type, and date filter pills; sticky Reset button
-- Sticky bottom tab bar (Value Bets ⚡ · History 🕐 · Sport picker) that hides on scroll-down and reappears on scroll-up
+- Left-side burger drawer with league, signal-type, and date filter pills; sticky Reset button
+- Sticky bottom tab bar (Signals ⚡ · History 🕐 · Sport picker) that hides on scroll-down and reappears on scroll-up
 - Sport popover from the bottom bar replaces the sport pill row
 - Pull-to-refresh gesture
 
 **Desktop layout (≥ 768 px):** title header, inline tab bar, sport/search/filter action bar, right-side filter drawer — unchanged.
 
-### Database (`data/bets.db`)
+### Database (`data/signals.db`)
 SQLite database with four tables:
 - `matches` — upcoming match metadata
 - `odds` — bookmaker odds (h2h and totals)
 - `fixtures` — finished match results with xG
-- `bet_history` — all recommended bets and their resolved outcomes
+- `signal_history` — all detected signals and their resolved outcomes
 
-On every run, unsettled future bets that are no longer in the recommended set are automatically pruned from both the local SQLite database and Supabase.
+On every run, unsettled future signals that are no longer in the detected set are automatically pruned from both the local SQLite database and Supabase.
 
 ---
 

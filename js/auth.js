@@ -11,7 +11,7 @@ export async function signInWithMagicLink(email) {
   const { error } = await sb.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: window.location.origin + window.location.pathname,
     },
   });
   if (error) throw error;

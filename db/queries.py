@@ -21,7 +21,7 @@ def _settle_totals(outcome: str, hg: int, ag: int) -> bool | None:
 
     Examples: "over_2_5" → line=2.5, threshold=2 → won if hg+ag > 2
               "over_3_25" → line=3.25, threshold=3 → won if hg+ag > 3
-    Returns None if the outcome string is not a totals bet.
+    Returns None if the outcome string is not a totals signal.
     """
     if not outcome.startswith(("over_", "under_")):
         return None

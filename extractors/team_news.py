@@ -1,5 +1,5 @@
 """
-NewsAPI + rule-based sentence extraction for high-EV bet context.
+NewsAPI + rule-based sentence extraction for high-EV signal context.
 Fetches recent articles per team, filters for relevance, then surfaces
 the top injury/suspension sentences with no external API or LLM needed.
 """
