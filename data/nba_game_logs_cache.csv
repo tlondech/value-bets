@@ -4993,3 +4993,21 @@ DEN,Denver Nuggets,2026-03-18,True,124,96,Philadelphia 76ers,2025-26
 PHI,Philadelphia 76ers,2026-03-18,False,96,124,Denver Nuggets,2025-26
 SAC,Sacramento Kings,2026-03-18,True,104,132,San Antonio Spurs,2025-26
 SA,San Antonio Spurs,2026-03-18,False,132,104,Sacramento Kings,2025-26
+BOS,Boston Celtics,2026-03-18,True,120,99,Golden State Warriors,2025-26
+GS,Golden State Warriors,2026-03-18,False,99,120,Boston Celtics,2025-26
+BKN,Brooklyn Nets,2026-03-18,True,92,121,Oklahoma City Thunder,2025-26
+OKC,Oklahoma City Thunder,2026-03-18,False,121,92,Brooklyn Nets,2025-26
+IND,Indiana Pacers,2026-03-18,True,119,127,Portland Trail Blazers,2025-26
+POR,Portland Trail Blazers,2026-03-18,False,127,119,Indiana Pacers,2025-26
+CHI,Chicago Bulls,2026-03-19,True,109,139,Toronto Raptors,2025-26
+TOR,Toronto Raptors,2026-03-19,False,139,109,Chicago Bulls,2025-26
+MIN,Minnesota Timberwolves,2026-03-19,True,147,111,Utah Jazz,2025-26
+UTAH,Utah Jazz,2026-03-19,False,111,147,Minnesota Timberwolves,2025-26
+NO,New Orleans Pelicans,2026-03-19,True,124,109,LA Clippers,2025-26
+LAC,LA Clippers,2026-03-19,False,109,124,New Orleans Pelicans,2025-26
+DAL,Dallas Mavericks,2026-03-19,True,120,135,Atlanta Hawks,2025-26
+ATL,Atlanta Hawks,2026-03-19,False,135,120,Dallas Mavericks,2025-26
+MEM,Memphis Grizzlies,2026-03-19,True,125,118,Denver Nuggets,2025-26
+DEN,Denver Nuggets,2026-03-19,False,118,125,Memphis Grizzlies,2025-26
+HOU,Houston Rockets,2026-03-19,True,116,124,Los Angeles Lakers,2025-26
+LAL,Los Angeles Lakers,2026-03-19,False,124,116,Houston Rockets,2025-26
