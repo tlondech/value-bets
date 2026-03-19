@@ -294,7 +294,6 @@ def fetch_active_tennis_leagues(api_key: str) -> list:
                 key=key,
                 display_name=sport["title"],
                 odds_sport=key,
-                fd_code=None,
                 sport_type="tennis",
             ))
 

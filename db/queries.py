@@ -361,8 +361,8 @@ def settle_signals(session) -> int:
 
         row.settled = True
         row.result = "won" if won else "lost"
-        row.actual_home_goals = hg
-        row.actual_away_goals = ag
+        row.actual_home_score = hg
+        row.actual_away_score = ag
         row.settled_at = now
         settled_count += 1
 
@@ -386,8 +386,8 @@ def load_signal_history(session) -> list[dict]:
             "ev":                r.ev,
             "settled":           r.settled,
             "result":            r.result,
-            "actual_home_goals": r.actual_home_goals,
-            "actual_away_goals": r.actual_away_goals,
+            "actual_home_score": r.actual_home_score,
+            "actual_away_score": r.actual_away_score,
         }
         for r in rows
     ]

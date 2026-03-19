@@ -1,11 +1,15 @@
 """
-Settlement helpers — dual-source (football-data.org supplements .co.uk).
+Settlement helpers — ESPN primary source, season-long fixtures as fill-in.
+
+Public entry point: settle_all_sports()
 """
 
 import logging
+from dataclasses import replace
+from datetime import date, timedelta
 
-from config import _current_season
-from extractors.footballdataorg_client import FootballDataOrgClient, FootballDataOrgError
+from extractors.base import MatchData
+from extractors.espn_soccer_client import ESPNSoccerClient
 from models.features import resolve_team_name
 
 logger = logging.getLogger(__name__)
@@ -15,73 +19,105 @@ def _fetch_org_settlement_fixtures(
     leagues: list,
     cfg,
     name_map: dict,
-) -> list[dict]:
+) -> list[MatchData]:
     """
-    Fetches finished fixtures from football-data.org for settlement use only.
-    Only called in force=True path. Returns [] on total failure.
-    Skips leagues whose fdo_enrich_code is None (UCL already covered via fdo_code,
-    World Cup has no .org source). Team names are pre-resolved to canonical form.
+    Fetches recent completed fixtures from ESPN for settlement use.
+    Covers the last 14 days to ensure freshly finished matches are captured.
+    Team names are pre-resolved to canonical form.
+    Returns [] on total failure.
     """
-    if not cfg.fdo_api_key:
+    football_leagues = [lg for lg in leagues if lg.sport_type == "football"]
+    if not football_leagues:
         return []
 
-    season = _current_season()
-    results: list[dict] = []
+    today = date.today()
+    start = today - timedelta(days=14)
+    league_keys = [lg.key for lg in football_leagues]
 
-    for league in leagues:
-        settle_code = league.fdo_enrich_code
-        if not settle_code:
-            continue
-        try:
-            client = FootballDataOrgClient(settle_code, season, cfg.fdo_api_key)
-            fixtures = client.fetch_fixtures()
-        except FootballDataOrgError as e:
-            logger.warning(
-                "[%s] .org settlement fetch failed (will fall back to .co.uk): %s",
-                league.key, e,
-            )
-            continue
+    try:
+        raw = ESPNSoccerClient().fetch_fixtures(start, today, leagues=league_keys)
+    except Exception as e:
+        logger.warning("ESPN settlement fetch failed: %s", e)
+        return []
 
-        for f in fixtures:
-            home_c = resolve_team_name(f["home_team"], name_map, league.key)
-            away_c = resolve_team_name(f["away_team"], name_map, league.key)
-            if not home_c or not away_c:
-                continue
-            results.append({**f, "home_team": home_c, "away_team": away_c, "league_key": league.key})
+    results: list[MatchData] = []
+    for f in raw:
+        lk = f.get("league_key", "")
+        home_c = resolve_team_name(f["home_team"], name_map, lk) or f["home_team"]
+        away_c = resolve_team_name(f["away_team"], name_map, lk) or f["away_team"]
+        from extractors.espn_soccer_client import _fixture_to_match_data
+        m = _fixture_to_match_data(f)
+        results.append(replace(m, home_team=home_c, away_team=away_c))
 
-    logger.debug("_fetch_org_settlement_fixtures: %d fixtures across %d leagues.", len(results), len(leagues))
+    logger.debug("_fetch_org_settlement_fixtures: %d fixtures from ESPN.", len(results))
     return results
 
 
 def _merge_settlement_fixtures(
-    couk_fixtures: list[dict],
-    org_fixtures: list[dict],
+    all_raw_fixtures: list[dict],
+    espn_settle: list[MatchData],
     name_map: dict,
-) -> list[dict]:
+) -> list[MatchData]:
     """
-    Merges .co.uk and .org fixture lists for settlement.
-    .org entries take precedence (near real-time). .co.uk fills gaps.
-    Dedup key: (canonical_home, canonical_away, YYYY-MM-DD) — timezone-safe.
+    Merges season-long ESPN fixture dicts with recent ESPN settlement MatchData.
+    Recent settlement entries take precedence (fresher).
+    Dedup key: (canonical_home, canonical_away, YYYY-MM-DD).
+    Returns list[MatchData].
     """
+    from extractors.espn_soccer_client import _fixture_to_match_data
+
     def _date_str(dt) -> str:
         if hasattr(dt, "strftime"):
             return dt.strftime("%Y-%m-%d")
         return str(dt)[:10]
 
-    # Index .org entries (already canonical)
-    org_index: dict[tuple, dict] = {}
-    for f in org_fixtures:
-        key = (f["home_team"], f["away_team"], _date_str(f["fixture_date"]))
-        org_index[key] = f
+    # Index recent settlement entries (already pre-resolved to canonical)
+    settle_index: dict[tuple, MatchData] = {}
+    for m in espn_settle:
+        key = (m.home_team, m.away_team, _date_str(m.kickoff))
+        settle_index[key] = m
 
-    # Fill in .co.uk entries not covered by .org
-    fill_ins: list[dict] = []
-    for f in couk_fixtures:
+    # Fill from season-long fixtures where not already covered
+    fill_ins: list[MatchData] = []
+    for f in all_raw_fixtures:
         lk = f.get("league_key", "")
         home_c = resolve_team_name(f["home_team"], name_map, lk) or f["home_team"]
         away_c = resolve_team_name(f["away_team"], name_map, lk) or f["away_team"]
         key = (home_c, away_c, _date_str(f["fixture_date"]))
-        if key not in org_index:
-            fill_ins.append(f)
+        if key not in settle_index:
+            m = _fixture_to_match_data(f)
+            fill_ins.append(replace(m, home_team=home_c, away_team=away_c))
 
-    return list(org_index.values()) + fill_ins
+    return list(settle_index.values()) + fill_ins
+
+
+def settle_all_sports(
+    supabase,
+    cfg,
+    all_raw_fixtures: list[dict],
+    name_map: dict,
+    force_fetch: bool,
+) -> None:
+    """
+    Settles past signals across all sport types.
+
+    Replaces the inline _settle_all() in main.py as the single settlement entry point.
+    """
+    from db.supabase import (
+        backfill_tennis_scores,
+        settle_nba_supabase_signals,
+        settle_supabase_signals,
+        settle_tennis_supabase_signals,
+    )
+
+    espn_settle = _fetch_org_settlement_fixtures(cfg.enabled_leagues, cfg, name_map) if force_fetch else []
+    football_fixtures = _merge_settlement_fixtures(all_raw_fixtures, espn_settle, name_map)
+    settle_supabase_signals(supabase, football_fixtures, name_map)
+
+    if any(lg.sport_type == "tennis" for lg in cfg.enabled_leagues):
+        settle_tennis_supabase_signals(supabase)
+        backfill_tennis_scores(supabase)
+
+    nba_keys = [lg.key for lg in cfg.enabled_leagues if lg.sport_type == "basketball"]
+    if nba_keys:
+        settle_nba_supabase_signals(supabase, nba_keys, name_map)

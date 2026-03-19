@@ -3,7 +3,7 @@ Surface-adjusted Elo model for tennis.
 
 Elo ratings are computed from Jeff Sackmann historical match data and blended
 across overall + surface-specific pools. Win probability is then compared to
-Winamax odds using the existing calculate_ev function to find +EV bets.
+Winamax odds using the existing calculate_ev function to find +EV signals.
 """
 import logging
 
@@ -132,21 +132,21 @@ def evaluate_tennis_match(
     p1_wins = 1.0 / (1.0 + 10.0 ** ((elo2 - elo1) / 400.0))
     p2_wins = 1.0 - p1_wins
 
-    bets = []
+    signals = []
     for outcome, true_prob, odds, label in (
         ("home_win", p1_wins, p1_odds, "Player 1 Win"),
         ("away_win", p2_wins, p2_odds, "Player 2 Win"),
     ):
         ev = calculate_ev(true_prob, odds)
         if ev >= ev_threshold and true_prob * odds <= max_prob_ratio:
-            bets.append({
+            signals.append({
                 "outcome":       outcome,
                 "outcome_label": label,
                 "odds":          odds,
                 "true_prob":     round(true_prob, 6),
                 "ev":            round(ev, 6),
             })
-    return bets
+    return signals
 
 
 def build_player_country_map(matches: pd.DataFrame) -> dict[str, str]:

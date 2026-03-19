@@ -188,7 +188,7 @@ def predict_game(
     }
 
 
-def evaluate_nba_match(
+def evaluate_basketball_match(
     home_team: str,
     away_team: str,
     home_ratings: dict,
@@ -240,7 +240,7 @@ def evaluate_nba_match(
     t_mu  = pred["total_mu"]
     t_std = pred["total_std"]
 
-    bets = []
+    signals = []
 
     # --- Moneyline (h2h) ---
     if home_odds and away_odds:
@@ -253,7 +253,7 @@ def evaluate_nba_match(
         ):
             ev = calculate_ev(true_prob, odds)
             if ev >= ev_threshold and true_prob * odds <= max_prob_ratio:
-                bets.append({
+                signals.append({
                     "outcome":       outcome,
                     "outcome_label": label,
                     "odds":          odds,
@@ -279,7 +279,7 @@ def evaluate_nba_match(
         ):
             ev = calculate_ev(true_prob, odds)
             if ev >= ev_threshold and true_prob * odds <= max_prob_ratio:
-                bets.append({
+                signals.append({
                     "outcome":       outcome,
                     "outcome_label": label,
                     "odds":          odds,
@@ -307,7 +307,7 @@ def evaluate_nba_match(
         ):
             ev = calculate_ev(true_prob, odds)
             if ev >= ev_threshold and true_prob * odds <= max_prob_ratio:
-                bets.append({
+                signals.append({
                     "outcome":       outcome,
                     "outcome_label": label,
                     "odds":          odds,
@@ -316,4 +316,4 @@ def evaluate_nba_match(
                     "market_group":  "spreads",
                 })
 
-    return bets
+    return signals

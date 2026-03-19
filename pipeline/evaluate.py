@@ -73,7 +73,7 @@ def build_features(
     rankings: dict[str, int] = {}
     total_matchdays: int | None = None
     form_map: dict[str, list[str]] = {}
-    if league.fdo_enrich_code:
+    if league.sport_type == "football":
         standings = compute_standings(raw_fixtures)
         rankings = standings["rankings"]
         total_matchdays = standings["total_matchdays"]

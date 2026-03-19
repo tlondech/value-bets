@@ -1,5 +1,5 @@
 """
-NBA historical game data client.
+Basketball (NBA) historical game data client.
 
 Uses the ESPN public API (no key required, works from any IP including CI).
 Falls back to an on-disk CSV cache written after every successful fetch.
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from extractors.espn_client import ESPNClient
+from extractors.espn_basketball_client import ESPNBasketballClient
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 _CACHE_PATH = Path(__file__).parent.parent / "data" / "nba_game_logs_cache.csv"
 
 
-class NBADataClient:
+class BasketballDataClient:
     """
     Fetches team game logs and recent results via ESPN.
     All methods return empty DataFrames / lists on total failure (non-fatal).
@@ -56,13 +56,10 @@ class NBADataClient:
 
     # ── Recent results (used for settlement) ──────────────────────
 
-    def fetch_recent_results(self, days_back: int = 7) -> list[dict]:
-        """
-        Returns completed NBA games from the last `days_back` days as:
-            [{home_team, away_team, home_pts, away_pts, game_date}, ...]
-        """
-        logger.debug("NBA fetch_recent_results: days_back=%d", days_back)
-        return _fetch_recent_from_espn(days_back)
+    def fetch_recent_results(self, days_back: int = 7):
+        """Returns completed NBA games from the last `days_back` days as list[MatchData]."""
+        logger.debug("Basketball fetch_recent_results: days_back=%d", days_back)
+        return ESPNBasketballClient().fetch_recent_results(days_back=days_back)
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +109,7 @@ def _fetch_from_espn(season: str) -> pd.DataFrame:
     )
     logger.debug("ESPN _fetch_from_espn: season_year=%d, %d months planned", season_year, len(months))
 
-    client   = ESPNClient()
+    client   = ESPNBasketballClient()
     all_rows: list[dict] = []
     seen: set[tuple]     = set()
 
@@ -126,7 +123,7 @@ def _fetch_from_espn(season: str) -> pd.DataFrame:
         end_dt     = date(year, month, last_day)
         date_range = f"{year}{month:02d}01-{year}{month:02d}{last_day:02d}"  # for logging
 
-        events = client.fetch_scoreboard("basketball", "nba", start_dt, end_dt)
+        events = client.fetch_scoreboard(client.SPORT, client.LEAGUE_MAP["nba"], start_dt, end_dt)
 
         completed = 0
         skipped   = 0
@@ -205,7 +202,8 @@ def _fetch_recent_from_espn(days_back: int) -> list[dict]:
 
     logger.debug("ESPN _fetch_recent_from_espn: fetching %s to %s", start, today)
 
-    events = ESPNClient().fetch_scoreboard("basketball", "nba", start, today, limit=500)
+    client = ESPNBasketballClient()
+    events = client.fetch_scoreboard(client.SPORT, client.LEAGUE_MAP["nba"], start, today, limit=500)
     result = []
     seen: set[tuple] = set()
 

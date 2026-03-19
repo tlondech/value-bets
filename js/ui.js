@@ -115,7 +115,7 @@ const HIST_COLS = [
   { key: "league_name",   label: "League", render: r => `<span class="whitespace-nowrap">${leagueBadge(r.league_key, LEAGUE_SHORT_NAMES[r.league_key] || r.league_name)}</span>` },
   { key: "home_team",     label: "Match",  render: r => `<span class="whitespace-nowrap">${esc(r.home_team)} <span class="text-gray-400 mx-0.5">v</span> ${esc(r.away_team)}</span>` },
   { key: "outcome_label", label: "Selection",   labelHtml: `Selection${infoIcon("Highest-EV outcome identified by the model")}`, render: r => `<span class="whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium ${signalBadgeCls(r.result, true)}">${esc(r.outcome_label)}</span>` },
-  { key: "_score",        label: "Score",  render: r => r.actual_home_goals != null ? `${r.actual_home_goals}–${r.actual_away_goals}` : "—", sortKey: "actual_home_goals", align: "center" },
+  { key: "_score",        label: "Score",  render: r => r.actual_home_score != null ? `${r.actual_home_score}–${r.actual_away_score}` : "—", sortKey: "actual_home_score", align: "center" },
   { key: "odds",          label: "Odds",   labelHtml: `Odds${infoIcon("Decimal odds at time of signal detection")}`,  render: r => `<span class="font-mono">${Number(r.odds).toFixed(2)}</span>`, align: "right" },
   { key: "true_prob",     label: "Prob%",  labelHtml: `Prob%${infoIcon("Model's estimated win probability")}`, render: r => `${(r.true_prob * 100).toFixed(1)}%`, align: "right" },
   { key: "ev",            label: "EV%",    labelHtml: `EV%${infoIcon("Expected value — edge over the bookmaker")}`,  render: r => evLabel(r.ev), align: "right" },
@@ -139,9 +139,10 @@ function tennisCircuitChip(leagueKey) {
                       : "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300";
   return `<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${cls}">${label}</span>`;
 }
-function tennisTournamentChip(name, surface) {
+function tennisTournamentChip(name, surface, round) {
   const cleanName = name.replace(/^(ATP|WTA)\s+/i, "").trim();
-  const text = surface ? `${cleanName} · ${surface}` : cleanName;
+  const parts = [cleanName, round, surface].filter(Boolean);
+  const text = parts.join(" · ");
   const cls  = surface === "Clay"  ? "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300"
              : surface === "Grass" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
              :                       "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300";
@@ -233,8 +234,8 @@ function groupHistoryIntoMatches(rows) {
         is_second_leg:     row.is_second_leg,
         agg_home:          row.agg_home,
         agg_away:          row.agg_away,
-        actual_home_goals: row.actual_home_goals,
-        actual_away_goals: row.actual_away_goals,
+        actual_home_score: row.actual_home_score,
+        actual_away_score: row.actual_away_score,
         signals: [],
       });
     }
@@ -306,10 +307,10 @@ export function renderCard(m, opts = {}) {
 
   const showResult = !!opts.showResult;
   let score = "";
-  if (showResult && m.actual_home_goals != null) {
+  if (showResult && m.actual_home_score != null) {
     score = isTennis
-      ? `<span class="text-sm font-bold tabular-nums">${m.actual_home_goals}–${m.actual_away_goals} sets</span>`
-      : `<span class="text-sm font-bold tabular-nums">${m.actual_home_goals}–${m.actual_away_goals}</span>`;
+      ? `<span class="text-sm font-bold tabular-nums">${m.actual_home_score}–${m.actual_away_score} sets</span>`
+      : `<span class="text-sm font-bold tabular-nums">${m.actual_home_score}–${m.actual_away_score}</span>`;
   }
 
   const signalLabel = b => {
@@ -341,7 +342,7 @@ export function renderCard(m, opts = {}) {
   <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
     <${headerTag} ${headerAttr} class="flex items-start justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700 ${headerHoverCls}">
       <div class="flex flex-wrap items-center gap-2 mr-3">
-        ${isTennis ? `${tennisCircuitChip(m.league_key)}${tennisTournamentChip(m.league_name, m.surface)}` : leagueBadge(m.league_key, badgeText)}
+        ${isTennis ? `${tennisCircuitChip(m.league_key)}${tennisTournamentChip(m.league_name, m.surface, m.stage)}` : leagueBadge(m.league_key, badgeText)}
         ${m.is_second_leg ? `<span class="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded font-semibold whitespace-nowrap flex items-center gap-1">2nd Leg ${m.agg_home != null ? '<span class="opacity-70 font-normal">| Agg ' + m.agg_home + "–" + m.agg_away + "</span>" : ""}</span>` : ""}
         ${m.h2h_used ? `<span class="text-xs bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 rounded">H2H</span>` : ""}
       </div>

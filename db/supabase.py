@@ -57,19 +57,26 @@ def _last_name(name: str) -> str:
     return name.strip().split()[-1].lower() if name.strip() else ""
 
 
-def _tennis_sets(matched: dict, home: str) -> tuple[int | None, int | None]:
-    """Returns (home_sets, away_sets) from an ESPN result dict, or (None, None) on failure.
+def _tennis_sets(matched, home: str) -> tuple[int | None, int | None]:
+    """Returns (home_sets, away_sets) from a MatchData or dict, or (None, None) on failure.
 
     Score format is "w-l" per set with winner's games first (e.g. "6-2 1-6 6-1").
+    Accepts both MatchData (score in metadata["score"]) and legacy dicts.
     """
-    score = matched.get("score")
+    from extractors.base import MatchData as _MatchData
+    if isinstance(matched, _MatchData):
+        score = matched.metadata.get("score")
+        home_name = matched.home_team
+    else:
+        score = matched.get("score")
+        home_name = matched.get("home_team", "")
     if not score:
         return None, None
     try:
         parsed = [s.split("(")[0].split("-") for s in score.split()]
         winner_sets = sum(1 for w, l in parsed if int(w) > int(l))
         loser_sets  = len(parsed) - winner_sets
-        home_winner = _last_name(matched["winner"]) == _last_name(home)
+        home_winner = _last_name(home_name) == _last_name(home)
         return (winner_sets, loser_sets) if home_winner else (loser_sets, winner_sets)
     except (ValueError, IndexError):
         return None, None
@@ -80,7 +87,7 @@ def _tennis_sets(matched: dict, home: str) -> tuple[int | None, int | None]:
 # ---------------------------------------------------------------------------
 
 _SETTLE_KEYS = frozenset({
-    "settled", "result", "settled_at", "actual_home_goals", "actual_away_goals"
+    "settled", "result", "settled_at", "actual_home_score", "actual_away_score"
 })
 
 
@@ -88,8 +95,8 @@ def _write_settled_signals(supabase: Client, rows: list[dict], sport: str) -> in
     """
     Persists evaluated settlement rows to signal_history.
 
-    Includes only keys present in the row (football rows carry actual_home_goals /
-    actual_away_goals; tennis rows do not — the key-filter handles both without branching).
+    Includes only keys present in the row (football rows carry actual_home_score /
+    actual_away_score; tennis rows do not — the key-filter handles both without branching).
     Returns the number of rows successfully written.
     """
     count = 0
@@ -138,22 +145,23 @@ def get_supabase_client() -> Client:
     return create_client(url, key)
 
 
-def settle_supabase_signals(supabase: Client, all_raw_fixtures: list[dict], name_map: dict | None = None) -> int:
+def settle_supabase_signals(supabase: Client, all_fixtures, name_map: dict | None = None) -> int:
     """
     Settles signals directly against Supabase — works in CI where no local SQLite exists.
 
+    Accepts list[MatchData] (from pipeline/settlement.py) or legacy list[dict].
     1. Fetches unsettled signals from Supabase whose kickoff is in the past.
-    2. Matches them against raw_fixtures (already fetched from football-data.co.uk).
+    2. Matches them against fixtures by canonical team name + date.
     3. Evaluates each outcome and upserts the result back to Supabase.
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    from extractors.base import MatchData as _MatchData
+
     try:
         resp = (
             supabase.table("signal_history")
             .select("kickoff,home_team,away_team,home_canonical,away_canonical,league_key,outcome")
             .eq("settled", False)
             .eq("sport", "football")
-            .lt("kickoff", now_iso)
             .execute()
         )
     except Exception as exc:
@@ -165,18 +173,23 @@ def settle_supabase_signals(supabase: Client, all_raw_fixtures: list[dict], name
         logger.debug("No unsettled past signals found in Supabase.")
         return 0
 
-    # Build fixture index keyed by canonical names so it aligns with row["home_canonical"].
-    # Each fixture is tagged with league_key by run_league_pipeline; resolve_team_name maps
-    # the raw CSV/API name to its canonical form. Falls back to raw name if unresolvable.
-    fixture_index: dict[tuple, dict] = {}
-    for f in all_raw_fixtures:
-        lk = f.get("league_key", "")
-        if name_map and lk:
-            home_c = resolve_team_name(f["home_team"], name_map, lk) or f["home_team"]
-            away_c = resolve_team_name(f["away_team"], name_map, lk) or f["away_team"]
+    # Normalise fixtures to a uniform (home_team, away_team, kickoff_dt, home_score, away_score) tuple.
+    # MatchData objects carry pre-resolved canonical names; raw dicts need resolve_team_name().
+    fixture_index: dict[tuple, tuple[datetime, int, int]] = {}
+    for f in all_fixtures:
+        if isinstance(f, _MatchData):
+            home_c, away_c = f.home_team, f.away_team
+            fixture_index[(home_c, away_c)] = (f.kickoff, f.home_score, f.away_score)
         else:
-            home_c, away_c = f["home_team"], f["away_team"]
-        fixture_index[(home_c, away_c)] = f
+            lk = f.get("league_key", "")
+            home_c = (resolve_team_name(f["home_team"], name_map, lk) or f["home_team"]) if name_map and lk else f["home_team"]
+            away_c = (resolve_team_name(f["away_team"], name_map, lk) or f["away_team"]) if name_map and lk else f["away_team"]
+            fixture_dt = f["fixture_date"]
+            if not isinstance(fixture_dt, datetime):
+                fixture_dt = datetime.fromisoformat(str(fixture_dt))
+            if fixture_dt.tzinfo is None:
+                fixture_dt = fixture_dt.replace(tzinfo=timezone.utc)
+            fixture_index[(home_c, away_c)] = (fixture_dt, f["home_goals"], f["away_goals"])
 
     rows_to_update = []
     settled_at = datetime.now(timezone.utc).isoformat()
@@ -191,21 +204,20 @@ def settle_supabase_signals(supabase: Client, all_raw_fixtures: list[dict], name
                 away_key = resolve_team_name(row.get("away_team", ""), name_map, lk) or row.get("away_team")
             else:
                 home_key, away_key = row.get("home_team"), row.get("away_team")
-        fixture = fixture_index.get((home_key, away_key))
-        if fixture is None:
+
+        entry = fixture_index.get((home_key, away_key))
+        if entry is None:
+            continue
+
+        fixture_dt, hg, ag = entry
+        if hg is None or ag is None:
             continue
 
         # Date guard: fixture must be within ±1 day of kickoff
         kickoff_dt = datetime.fromisoformat(row["kickoff"].replace("Z", "+00:00"))
-        fixture_dt = fixture["fixture_date"]
-        if not isinstance(fixture_dt, datetime):
-            fixture_dt = datetime.fromisoformat(str(fixture_dt))
-        if fixture_dt.tzinfo is None:
-            fixture_dt = fixture_dt.replace(tzinfo=timezone.utc)
         if abs((fixture_dt - kickoff_dt).total_seconds()) > FIXTURE_DATE_TOLERANCE_SECONDS:
             continue
 
-        hg, ag = fixture["home_goals"], fixture["away_goals"]
         outcome = row["outcome"]
         won = {"home_win": hg > ag, "draw": hg == ag, "away_win": ag > hg}.get(outcome)
         if won is None:
@@ -218,8 +230,8 @@ def settle_supabase_signals(supabase: Client, all_raw_fixtures: list[dict], name
             "outcome":           row["outcome"],
             "settled":           True,
             "result":            "won" if won else "lost",
-            "actual_home_goals": hg,
-            "actual_away_goals": ag,
+            "actual_home_score": hg,
+            "actual_away_score": ag,
             "settled_at":        settled_at,
         })
 
@@ -237,9 +249,7 @@ def settle_tennis_supabase_signals(supabase: Client) -> int:
     Fetches the last 14 days of completed ATP + WTA matches in two requests,
     then matches them against unsettled signals by player name and date proximity.
     """
-    from extractors.espn_client import ESPNClient
-
-    now_iso = datetime.now(timezone.utc).isoformat()
+    from extractors.espn_tennis_client import ESPNTennisClient
 
     try:
         resp = (
@@ -247,7 +257,6 @@ def settle_tennis_supabase_signals(supabase: Client) -> int:
             .select("id,kickoff,home_team,away_team,outcome,league_key")
             .eq("settled", False)
             .eq("sport", "tennis")
-            .lt("kickoff", now_iso)
             .execute()
         )
     except Exception as exc:
@@ -259,7 +268,7 @@ def settle_tennis_supabase_signals(supabase: Client) -> int:
         logger.debug("No unsettled past tennis signals found.")
         return 0
 
-    all_results = ESPNClient().fetch_tennis_recent_results(days_back=14)
+    all_results = ESPNTennisClient().fetch_recent_results(days_back=14)
 
     rows_to_update = []
     unmatched = []
@@ -273,10 +282,11 @@ def settle_tennis_supabase_signals(supabase: Client) -> int:
         matched = None
         for r in all_results:
             # Date guard: within ±2 days (tennis matches sometimes span midnight)
-            if abs((r["match_date"].replace(tzinfo=timezone.utc) - kickoff_dt).total_seconds()) > 2 * 86400:
+            r_kickoff = r.kickoff if r.kickoff.tzinfo else r.kickoff.replace(tzinfo=timezone.utc)
+            if abs((r_kickoff - kickoff_dt).total_seconds()) > 2 * 86400:
                 continue
             # Match by last name (handles minor name format differences)
-            players = {_last_name(r["winner"]), _last_name(r["loser"])}
+            players = {_last_name(r.home_team), _last_name(r.away_team)}
             if _last_name(home) in players and _last_name(away) in players:
                 matched = r
                 break
@@ -286,8 +296,8 @@ def settle_tennis_supabase_signals(supabase: Client) -> int:
             continue
 
         won = (
-            (row["outcome"] == "home_win" and _last_name(matched["winner"]) == _last_name(home)) or
-            (row["outcome"] == "away_win" and _last_name(matched["winner"]) == _last_name(away))
+            (row["outcome"] == "home_win" and _last_name(matched.home_team) == _last_name(home)) or
+            (row["outcome"] == "away_win" and _last_name(matched.home_team) == _last_name(away))
         )
 
         home_sets, away_sets = _tennis_sets(matched, home)
@@ -303,8 +313,8 @@ def settle_tennis_supabase_signals(supabase: Client) -> int:
             "settled_at": settled_at,
         }
         if home_sets is not None:
-            update["actual_home_goals"] = home_sets
-            update["actual_away_goals"] = away_sets
+            update["actual_home_score"] = home_sets
+            update["actual_away_score"] = away_sets
         rows_to_update.append(update)
 
     # Fallback: settle remaining unmatched signals via tennis-data.co.uk
@@ -330,7 +340,7 @@ def settle_tennis_supabase_signals(supabase: Client) -> int:
                     match_dt = match_dt.replace(tzinfo=timezone.utc)
                 if abs((match_dt - kickoff_dt).total_seconds()) > 2 * 86400:
                     continue
-                players = {_last_name(r["winner"]), _last_name(r["loser"])}
+                players = {_last_name(r["winner"]), _last_name(r["loser"])}  # co.uk schema unchanged
                 if _last_name(home) in players and _last_name(away) in players:
                     matched_couk = r
                     break
@@ -361,10 +371,10 @@ def settle_tennis_supabase_signals(supabase: Client) -> int:
 
 def backfill_tennis_scores(supabase: Client) -> int:
     """
-    Backfills actual_home_goals / actual_away_goals for already-settled tennis
+    Backfills actual_home_score / actual_away_score for already-settled tennis
     signals that are missing scores (e.g. settled before score tracking was added).
     """
-    from extractors.espn_client import ESPNClient
+    from extractors.espn_tennis_client import ESPNTennisClient
 
     try:
         resp = (
@@ -372,7 +382,7 @@ def backfill_tennis_scores(supabase: Client) -> int:
             .select("id,kickoff,home_team,away_team,outcome")
             .eq("settled", True)
             .eq("sport", "tennis")
-            .is_("actual_home_goals", "null")
+            .is_("actual_home_score", "null")
             .execute()
         )
     except Exception as exc:
@@ -384,7 +394,7 @@ def backfill_tennis_scores(supabase: Client) -> int:
         logger.debug("backfill_tennis_scores: nothing to backfill.")
         return 0
 
-    all_results = ESPNClient().fetch_tennis_recent_results(days_back=14)
+    all_results = ESPNTennisClient().fetch_recent_results(days_back=14)
     count = 0
 
     for row in rows:
@@ -394,9 +404,9 @@ def backfill_tennis_scores(supabase: Client) -> int:
         matched = next(
             (
                 r for r in all_results
-                if abs((r["match_date"].replace(tzinfo=timezone.utc) - kickoff_dt).total_seconds()) <= 2 * 86400
-                and _last_name(home) in {_last_name(r["winner"]), _last_name(r["loser"])}
-                and _last_name(away) in {_last_name(r["winner"]), _last_name(r["loser"])}
+                if abs(((r.kickoff if r.kickoff.tzinfo else r.kickoff.replace(tzinfo=timezone.utc)) - kickoff_dt).total_seconds()) <= 2 * 86400
+                and _last_name(home) in {_last_name(r.home_team), _last_name(r.away_team)}
+                and _last_name(away) in {_last_name(r.home_team), _last_name(r.away_team)}
             ),
             None,
         )
@@ -407,11 +417,14 @@ def backfill_tennis_scores(supabase: Client) -> int:
         if home_sets is None:
             continue
 
+        payload = matched.to_settlement_dict()
+        # Override with corrected per-signal set counts (winner may be away_team for this signal)
+        payload["actual_home_score"] = home_sets
+        payload["actual_away_score"] = away_sets
+        payload.pop("settled", None)  # don't flip settled=True on a backfill
+
         try:
-            supabase.table("signal_history").update({
-                "actual_home_goals": home_sets,
-                "actual_away_goals": away_sets,
-            }).eq("id", row["id"]).execute()
+            supabase.table("signal_history").update(payload).eq("id", row["id"]).execute()
             count += 1
         except Exception as exc:
             logger.error("backfill_tennis_scores: update failed for id=%s: %s", row["id"], exc)
@@ -433,17 +446,12 @@ def settle_nba_supabase_signals(
     (e.g. "LA Clippers" and "Los Angeles Clippers" both → "LAC"), so matching
     is robust to display-name differences between the odds source and ESPN.
 
-    Only attempts settlement for games that started more than NBA_LIVE_MATCH_WINDOW_HOURS
-    ago to ensure the game has actually finished (overtime, TV timeouts, etc.).
+    Settlement relies on ESPN only returning completed=True results, so no kickoff
+    time guard is needed — unfinished games simply won't match.
     """
-    from datetime import timedelta
-    from constants import NBA_LIVE_MATCH_WINDOW_HOURS
-    from extractors.nba_data_client import NBADataClient
+    from extractors.basketball_data_client import BasketballDataClient
 
     now = datetime.now(timezone.utc)
-    # Only consider signals for games that have had enough time to finish
-    cutoff_iso = (now - timedelta(hours=NBA_LIVE_MATCH_WINDOW_HOURS)).isoformat()
-
     try:
         resp = (
             supabase.table("signal_history")
@@ -451,7 +459,6 @@ def settle_nba_supabase_signals(
             .eq("settled", False)
             .eq("sport", "basketball")
             .in_("league_key", nba_league_keys)
-            .lt("kickoff", cutoff_iso)
             .execute()
         )
     except Exception as exc:
@@ -460,11 +467,11 @@ def settle_nba_supabase_signals(
 
     unsettled = cast(list[dict], resp.data or [])
     if not unsettled:
-        logger.debug("No unsettled past NBA signals found.")
+        logger.debug("No unsettled NBA signals found.")
         return 0
 
     try:
-        results = NBADataClient().fetch_recent_results(days_back=7)
+        results = BasketballDataClient().fetch_recent_results(days_back=7)
     except Exception as exc:
         logger.warning("NBA results fetch failed — skipping settlement: %s", exc)
         return 0
@@ -484,10 +491,11 @@ def settle_nba_supabase_signals(
     def _to_abbr(name: str) -> str:
         return nba_abbr.get(name.lower(), name.lower())
 
-    # Index results by (home_abbr, away_abbr, game_date)
-    results_index: dict[tuple, dict] = {}
+    # Index results by (home_abbr, away_abbr, game_date)  — r is now MatchData
+    from extractors.base import MatchData as _MatchData
+    results_index: dict[tuple, _MatchData] = {}
     for r in results:
-        key = (_to_abbr(r["home_team"]), _to_abbr(r["away_team"]), r["game_date"])
+        key = (_to_abbr(r.home_team), _to_abbr(r.away_team), r.kickoff.date())
         results_index[key] = r
 
     rows_to_update = []
@@ -510,8 +518,10 @@ def settle_nba_supabase_signals(
         if matched is None:
             continue
 
-        home_pts = matched["home_pts"]
-        away_pts = matched["away_pts"]
+        if matched.home_score is None or matched.away_score is None:
+            continue
+        home_pts = matched.home_score
+        away_pts = matched.away_score
         outcome  = row["outcome"]
 
         # Moneyline
@@ -538,8 +548,8 @@ def settle_nba_supabase_signals(
             "kickoff":   row["kickoff"],
             "settled":   True,
             "result":    "won" if won else "lost",
-            "actual_home_goals": home_pts,
-            "actual_away_goals": away_pts,
+            "actual_home_score": home_pts,
+            "actual_away_score": away_pts,
             "settled_at": settled_at,
         })
 

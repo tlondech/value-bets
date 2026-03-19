@@ -2,9 +2,8 @@
 Shared helpers and constants used across the pipeline.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
-from constants import LIVE_MATCH_WINDOW_HOURS
 from models.features import resolve_team_name
 
 logger_name = __name__
@@ -35,10 +34,9 @@ def get_outcome_label(outcome: str) -> str:
     return outcome
 
 
-def is_live(commence_time: datetime, window_hours: float = LIVE_MATCH_WINDOW_HOURS) -> bool:
-    """Return True if the match is currently in progress (kicked off but not yet finished)."""
-    now = datetime.now(timezone.utc)
-    return commence_time <= now < commence_time + timedelta(hours=window_hours)
+def is_live(commence_time: datetime) -> bool:
+    """Return True if the match has already started (kickoff is in the past)."""
+    return commence_time <= datetime.now(timezone.utc)
 
 
 def build_leg2_map(

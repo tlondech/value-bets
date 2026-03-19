@@ -1,13 +1,13 @@
 """
 Data fetching and loading for a single league.
 
-In force_fetch mode: hits The Odds API, football-data.org, and football-data.co.uk,
-then persists everything to SQLite.
+In force_fetch mode: hits The Odds API and ESPN, then persists everything to SQLite.
 In cached mode: loads from SQLite only.
 """
 
 import json
 import logging
+from datetime import date
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -20,10 +20,8 @@ from db.queries import (
     upsert_match,
     upsert_odds,
 )
-from extractors.footballdata_client import FootballDataClient, FootballDataError
-from extractors.footballdataorg_client import FootballDataOrgClient, FootballDataOrgError
+from extractors.espn_soccer_client import ESPNSoccerClient
 from extractors.odds import OddsAPIClient
-from models.features import resolve_team_name
 from pipeline.helpers import is_live
 
 logger = logging.getLogger(__name__)
@@ -102,33 +100,6 @@ def fetch_league_data(
             logger.debug("[%s] No upcoming matches with Winamax odds — skipping.", league.key)
             return [], [], {}, {}, None
 
-        # Phase 1b: Fetch stage/matchweek enrichment (non-fatal)
-        enrich_code = league.fdo_code or league.fdo_enrich_code
-        if enrich_code and cfg.fdo_api_key:
-            fdo_enrich = FootballDataOrgClient(enrich_code, season, cfg.fdo_api_key)
-            try:
-                stage_map, crest_map, _ = fdo_enrich.fetch_stage_map(name_map, league.key)
-                logger.debug("[%s] Stage map: %d entries, %d crests.", league.key, len(stage_map), len(crest_map))
-                # Persist crests so no-force runs can use them
-                if crest_map:
-                    p = Path(cfg.football_crest_map_path)
-                    existing = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
-                    existing.update(crest_map)
-                    p.write_text(json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
-            except Exception as e:
-                logger.warning("[%s] Stage enrichment failed: %s", league.display_name, e)
-
-        # Apply stage to events before upsert so it's persisted in SQLite
-        # and available on subsequent non-force runs via load_upcoming_events_from_db.
-        if stage_map:
-            for event in upcoming_events:
-                home_c = resolve_team_name(event["home_team"], name_map, league.key)
-                away_c = resolve_team_name(event["away_team"], name_map, league.key)
-                if home_c and away_c:
-                    stage = stage_map.get(f"{home_c}|{away_c}")
-                    if stage:
-                        event["stage"] = stage
-
         # Phase 2: Upsert matches + odds (skip odds for live matches)
         with Session(engine) as session:
             for event in upcoming_events:
@@ -137,15 +108,10 @@ def fetch_league_data(
                     upsert_odds(session, event)
             session.commit()
 
-        # Phase 3: Fetch finished fixtures from API
-        try:
-            if league.fd_code is not None:
-                raw_fixtures = FootballDataClient(league.fd_code, season).fetch_fixtures()
-            else:
-                raw_fixtures = FootballDataOrgClient(league.fdo_code, season, cfg.fdo_api_key).fetch_fixtures()  # type: ignore[arg-type]
-        except (FootballDataError, FootballDataOrgError) as e:
-            logger.error("[%s] Failed to fetch fixtures: %s — skipping league.", league.display_name, e)
-            return [], [], {}, {}, None
+        # Phase 3: Fetch finished fixtures from ESPN
+        espn = ESPNSoccerClient()
+        season_start = date(season, 7, 1)
+        raw_fixtures = espn.fetch_fixtures(season_start, date.today(), leagues=[league.key])
 
         if not raw_fixtures:
             logger.warning(
@@ -161,10 +127,9 @@ def fetch_league_data(
         # Also fetch prior season for multi-season H2H context (non-fatal)
         prior_season = season - 1
         try:
-            if league.fd_code is not None:
-                prior_fixtures = FootballDataClient(league.fd_code, prior_season).fetch_fixtures()
-            else:
-                prior_fixtures = FootballDataOrgClient(league.fdo_code, prior_season, cfg.fdo_api_key).fetch_fixtures()  # type: ignore[arg-type]
+            prior_fixtures = espn.fetch_fixtures(
+                date(prior_season, 7, 1), date(season, 6, 30), leagues=[league.key],
+            )
             if prior_fixtures:
                 with Session(engine) as session:
                     upsert_fixtures(session, prior_fixtures, league.key, prior_season)
@@ -172,6 +137,20 @@ def fetch_league_data(
                 logger.debug("[%s] Fetched %d prior-season fixtures for H2H.", league.key, len(prior_fixtures))
         except Exception as e:
             logger.debug("[%s] Could not fetch prior-season fixtures (%d): %s", league.key, prior_season, e)
+
+        # Build crest map from ESPN logo URLs and persist to JSON
+        from models.features import resolve_team_name
+        p = Path(cfg.football_crest_map_path)
+        crest_map = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+        for f in raw_fixtures:
+            for team_key, logo_key in (("home_team", "home_logo"), ("away_team", "away_logo")):
+                logo = f.get(logo_key)
+                if not logo:
+                    continue
+                canonical = resolve_team_name(f[team_key], name_map, league.key) or f[team_key]
+                crest_map[canonical] = logo
+        p.write_text(json.dumps(crest_map, indent=2, ensure_ascii=False), encoding="utf-8")
+        logger.debug("[%s] Football crest map updated: %d entries.", league.key, len(crest_map))
 
     else:
         # Load from DB — no API calls

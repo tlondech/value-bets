@@ -29,7 +29,7 @@ For each active ATP/WTA tournament (discovered automatically each run):
 
 Elo ratings are computed once per run and shared across all tournaments for the same tour (ATP or WTA).
 
-**Settlement:** Completed match results are sourced from tennis-data.co.uk CSV files, published after each tournament concludes. Signals from in-progress tournaments settle automatically once the CSV becomes available.
+**Settlement:** Completed match results are sourced from the ESPN public API. tennis-data.co.uk CSVs are used as a fallback for tournaments not yet reflected in ESPN.
 
 ### NBA basketball pipeline
 
@@ -96,7 +96,6 @@ Edit `.env` and fill in your keys:
 
 ```env
 THE_ODDS_API_KEY=your_key_here         # required — https://the-odds-api.com (500 free req/month)
-FOOTBALL_DATA_ORG_API_KEY=your_key     # required for Champions League — https://www.football-data.org (free tier)
 SUPABASE_URL=your_supabase_url         # required — https://supabase.com
 SUPABASE_ANON_KEY=your_anon_key        # required — Supabase project anon key
 NEWS_API_KEY=your_key_here             # optional — https://newsapi.org (100 req/day free tier)
@@ -147,7 +146,6 @@ All settings can be overridden via `.env`:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `THE_ODDS_API_KEY` | — | The Odds API key (required) |
-| `FOOTBALL_DATA_ORG_API_KEY` | `""` | football-data.org key (required for UCL) |
 | `SUPABASE_URL` | — | Supabase project URL (required) |
 | `SUPABASE_ANON_KEY` | — | Supabase project anon key (required) |
 | `NEWS_API_KEY` | `""` | NewsAPI key (optional — enables team news for signals with EV ≥ 20% within 24h of kickoff) |
@@ -185,12 +183,15 @@ All settings can be overridden via `.env`:
 │   └── daily_update.yml             # Runs every 3 hours (10:00–22:00 UTC), auto-commits crest maps
 │
 ├── extractors/
+│   ├── base.py                      # Universal MatchData schema + SportsExtractor protocol
+│   ├── espn_client.py               # Shared ESPN HTTP transport (base class for sport clients)
+│   ├── espn_basketball_client.py    # ESPN NBA match results (completed games → MatchData)
+│   ├── espn_soccer_client.py        # ESPN football fixtures (settlement)
+│   ├── espn_tennis_client.py        # ESPN tennis match results (settlement)
+│   ├── basketball_data_client.py    # ESPN game logs for NBA ratings (with CSV cache)
+│   ├── tennis_sackmann_client.py    # Jeff Sackmann ATP/WTA historical data for Elo ratings
+│   ├── tennisdatauk_client.py       # tennis-data.co.uk CSVs (tennis settlement fallback)
 │   ├── odds.py                      # The Odds API client (1X2, O/U, spreads, tennis discovery)
-│   ├── nba_data_client.py           # NBA Stats API client (game logs, recent results)
-│   ├── tennis_data_client.py        # Jeff Sackmann ATP/WTA historical data client
-│   ├── footballdata_client.py       # football-data.co.uk CSV client (domestic leagues)
-│   ├── footballdataorg_client.py    # football-data.org API client (UCL)
-│   ├── soccerdata_client.py         # Alternative data source
 │   ├── stats.py                     # Stats processing utilities
 │   └── team_news.py                 # NewsAPI client — injury/suspension context for high-EV signals
 │
@@ -335,9 +336,8 @@ On every run, unsettled future signals that are no longer in the detected set ar
 | Source | Usage | Cost |
 |--------|-------|------|
 | [The Odds API](https://the-odds-api.com) | Live odds (Winamax), tennis tournament discovery | 500 req/month free |
-| [football-data.co.uk](https://football-data.co.uk) | Historical results for domestic leagues | Free |
-| [football-data.org](https://www.football-data.org) | Champions League fixtures and results | Free tier available |
-| [Jeff Sackmann / tennis_atp](https://github.com/JeffSackmann/tennis_atp) | ATP historical match data for Elo | Free (GitHub) |
-| [Jeff Sackmann / tennis_wta](https://github.com/JeffSackmann/tennis_wta) | WTA historical match data for Elo | Free (GitHub) |
-| [ESPN public API](https://site.api.espn.com) | NBA team game logs | Free |
+| [ESPN public API](https://site.api.espn.com) | Football/tennis/basketball settlement; NBA game logs | Free (no key) |
+| [Jeff Sackmann / tennis_atp](https://github.com/JeffSackmann/tennis_atp) | ATP historical match data for Elo ratings | Free (GitHub) |
+| [Jeff Sackmann / tennis_wta](https://github.com/JeffSackmann/tennis_wta) | WTA historical match data for Elo ratings | Free (GitHub) |
+| [tennis-data.co.uk](http://www.tennis-data.co.uk) | Tennis settlement fallback (CSV) | Free |
 | [NewsAPI](https://newsapi.org) | Team news and injury context (optional) | 100 req/day free tier |

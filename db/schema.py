@@ -78,8 +78,8 @@ class SignalHistory(Base):
     ev                = Column(Float,    nullable=False)
     settled           = Column(Boolean,  default=False)
     result            = Column(String,   nullable=True)    # "won" | "lost"
-    actual_home_goals = Column(Integer,  nullable=True)
-    actual_away_goals = Column(Integer,  nullable=True)
+    actual_home_score = Column(Integer,  nullable=True)
+    actual_away_score = Column(Integer,  nullable=True)
     settled_at        = Column(DateTime, nullable=True)
     home_rank         = Column(Integer,  nullable=True)
     away_rank         = Column(Integer,  nullable=True)

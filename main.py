@@ -30,21 +30,18 @@ from constants import LOCAL_REPORT_URL
 from db.queries import prune_stale_signals, save_signals_to_history
 from db.schema import init_db
 from db.supabase import (
-    backfill_tennis_scores,
     get_supabase_client,
     prune_stale_supabase_signals,
     push_signals_to_supabase,
-    settle_nba_supabase_signals,
-    settle_supabase_signals,
-    settle_tennis_supabase_signals,
 )
-from extractors.nba_data_client import NBADataClient
+from extractors.basketball_data_client import BasketballDataClient
+from extractors.espn_tennis_client import ESPNTennisClient
 from extractors.odds import fetch_active_tennis_leagues
-from extractors.tennis_data_client import TennisDataClient
+from extractors.tennis_sackmann_client import TennisDataClient
 from models.features import load_team_name_map
 from models.nba_model import compute_nba_ratings
 from models.tennis_model import build_player_country_map, compute_elo_ratings
-from pipeline import _fetch_org_settlement_fixtures, _merge_settlement_fixtures, run_league_pipeline
+from pipeline import run_league_pipeline, settle_all_sports
 
 # ---------------------------------------------------------------------------
 # Logging setup
@@ -109,12 +106,24 @@ def _init_tennis(cfg) -> None:
             **build_player_country_map(atp_matches),
             **build_player_country_map(wta_matches),
         }
-        if country_map:
+
+        # Fetch ESPN flag URLs — these override flagcdn.com entries (higher quality, same CDN)
+        espn_flags: dict[str, str] = {}
+        try:
+            for r in ESPNTennisClient().fetch_recent_results(days_back=30):
+                if r.metadata.get("home_flag"):
+                    espn_flags[r.home_team] = r.metadata["home_flag"]
+                if r.metadata.get("away_flag"):
+                    espn_flags[r.away_team] = r.metadata["away_flag"]
+        except Exception as e:
+            logger.debug("ESPN tennis flag fetch failed (non-fatal): %s", e)
+
+        if country_map or espn_flags:
             p = Path(cfg.tennis_crest_map_path)
             existing = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
-            merged = {**country_map, **existing}  # existing entries win (allow manual overrides)
+            merged = {**existing, **country_map, **espn_flags}  # ESPN flags > flagcdn > stale
             p.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
-            logger.debug("Tennis: %d player flag URL(s) merged into %s", len(country_map), cfg.tennis_crest_map_path)
+            logger.debug("Tennis: %d flag URL(s) merged into %s (%d from ESPN)", len(merged), cfg.tennis_crest_map_path, len(espn_flags))
     except Exception as e:
         logger.warning("Tennis Elo computation failed — tennis leagues will be skipped: %s", e)
 
@@ -132,7 +141,7 @@ def _init_nba(cfg) -> None:
     try:
         nba_season = _current_nba_season()
         rolling_window = cfg.rolling_window * 2  # more games needed for basketball
-        games_df = NBADataClient().fetch_team_game_logs(nba_season)
+        games_df = BasketballDataClient().fetch_team_game_logs(nba_season)
         cfg.nba_ratings = compute_nba_ratings(games_df, rolling_window=rolling_window)
         logger.debug(
             "NBA: %d team(s) rated for season %s (rolling=%d)",
@@ -164,20 +173,6 @@ def _log_enabled_leagues(cfg) -> None:
 # Settlement
 # ---------------------------------------------------------------------------
 
-def _settle_all(supabase, cfg, all_raw_fixtures: list[dict], name_map: dict, force_fetch: bool) -> None:
-    """Settles past signals across all sport types."""
-    org_settle = _fetch_org_settlement_fixtures(cfg.enabled_leagues, cfg, name_map) if force_fetch else []
-    settlement_fixtures = _merge_settlement_fixtures(all_raw_fixtures, org_settle, name_map)
-    settle_supabase_signals(supabase, settlement_fixtures, name_map)
-
-    tennis_keys = [lg.key for lg in cfg.enabled_leagues if lg.sport_type == "tennis"]
-    if tennis_keys:
-        settle_tennis_supabase_signals(supabase)
-        backfill_tennis_scores(supabase)
-
-    nba_keys = [lg.key for lg in cfg.enabled_leagues if lg.sport_type == "basketball"]
-    if nba_keys:
-        settle_nba_supabase_signals(supabase, nba_keys, name_map)
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +231,7 @@ def run_pipeline(force_fetch: bool = False, dry_run: bool = False) -> None:
         total_signals, len(all_signals), time.monotonic() - t0,
     )
 
-    _settle_all(supabase, cfg, all_raw_fixtures, name_map, force_fetch)
+    settle_all_sports(supabase, cfg, all_raw_fixtures, name_map, force_fetch)
     _persist(supabase, engine, all_signals, {lg.key for lg in cfg.enabled_leagues})
 
     webbrowser.open(LOCAL_REPORT_URL)

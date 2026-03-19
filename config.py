@@ -36,35 +36,24 @@ UCL_KNOCKOUT_STAGES: frozenset = frozenset({
     "ROUND_OF_16", "LAST_16", "QUARTER_FINALS", "SEMI_FINALS",
 })
 
-# Imported here to avoid circular imports — used as default for NBA LeagueConfig
-from constants import NBA_LIVE_MATCH_WINDOW_HOURS as _NBA_WINDOW  # noqa: E402
-
-
 @dataclass
 class LeagueConfig:
     key: str                           # slug used in team_name_map and DB (e.g. "epl")
     display_name: str                  # shown in HTML report badge (e.g. "Premier League")
     odds_sport: str                    # The Odds API sport key
-    fd_code: str | None                # football-data.co.uk league code; None = not available
     season_override: int | None = None # set only for competitions with non-standard seasons
-    fdo_code: str | None = None        # football-data.org competition code (e.g. "CL")
-    fdo_enrich_code: str | None = None # football-data.org code for matchweek/stage enrichment
     sport_type: str = "football"       # "football" | "tennis" | "basketball"
-    live_window_hours: float = 2.5     # hours after kickoff during which the match is considered live
 
 
 LEAGUES: list[LeagueConfig] = [
-    LeagueConfig("ligue1",     "Ligue 1",          "soccer_france_ligue_one",    "F1",  fdo_enrich_code="FL1"),
-    LeagueConfig("epl",        "Premier League",   "soccer_epl",                 "E0",  fdo_enrich_code="PL"),
-    LeagueConfig("laliga",     "La Liga",           "soccer_spain_la_liga",       "SP1", fdo_enrich_code="PD"),
-    LeagueConfig("bundesliga", "Bundesliga",        "soccer_germany_bundesliga",  "D1",  fdo_enrich_code="BL1"),
-    LeagueConfig("seriea",     "Serie A",           "soccer_italy_serie_a",       "I1",  fdo_enrich_code="SA"),
-    LeagueConfig("ucl",        "Champions League", "soccer_uefa_champs_league",   None, fdo_code="CL"),
-    LeagueConfig("worldcup",   "World Cup",         "soccer_fifa_world_cup",      None, season_override=2026),
-    LeagueConfig(
-        "nba", "NBA", "basketball_nba", fd_code=None,
-        sport_type="basketball", live_window_hours=_NBA_WINDOW,
-    ),
+    LeagueConfig("ligue1",     "Ligue 1",          "soccer_france_ligue_one"),
+    LeagueConfig("epl",        "Premier League",   "soccer_epl"),
+    LeagueConfig("laliga",     "La Liga",          "soccer_spain_la_liga"),
+    LeagueConfig("bundesliga", "Bundesliga",       "soccer_germany_bundesliga"),
+    LeagueConfig("seriea",     "Serie A",          "soccer_italy_serie_a"),
+    LeagueConfig("ucl",        "Champions League", "soccer_uefa_champs_league"),
+    LeagueConfig("worldcup",   "World Cup",        "soccer_fifa_world_cup",      season_override=2026),
+    LeagueConfig("nba", "NBA", "basketball_nba", sport_type="basketball"),
 ]
 
 _LEAGUES_BY_KEY: dict[str, LeagueConfig] = {lg.key: lg for lg in LEAGUES}
@@ -74,7 +63,6 @@ _LEAGUES_BY_KEY: dict[str, LeagueConfig] = {lg.key: lg for lg in LEAGUES}
 class Config:
     # API credentials
     odds_api_key: str
-    fdo_api_key: str = ""              # football-data.org key; required if any fdo_code league is enabled
     news_api_key: str = ""             # NewsAPI key; optional — enables team news context for EV ≥ 20% signals
 
     # Leagues to process in this run
@@ -142,17 +130,8 @@ def load_config() -> Config:
     else:
         enabled = list(LEAGUES)
 
-    fdo_api_key = os.getenv("FOOTBALL_DATA_ORG_API_KEY", "")
-    football_enabled = [lg for lg in enabled if lg.sport_type == "football"]
-    if any(lg.fdo_code or lg.fdo_enrich_code for lg in football_enabled) and not fdo_api_key:
-        raise ValueError(
-            "FOOTBALL_DATA_ORG_API_KEY is required for Champions League and matchweek enrichment.\n"
-            "Register free at https://www.football-data.org/ and add the key to .env"
-        )
-
     return Config(
         odds_api_key=os.environ["THE_ODDS_API_KEY"],
-        fdo_api_key=fdo_api_key,
         news_api_key=os.getenv("NEWS_API_KEY", ""),
         enabled_leagues=enabled,
         ev_threshold=float(os.getenv("EV_THRESHOLD", "0.05")),

@@ -110,12 +110,6 @@ EV_THRESHOLD = 0.05
 # higher variance in knockout football)
 UCL_PROB_RATIO_CAP = 1.4
 
-# Hours window used to classify a match as "currently live" (kicked off but unfinished)
-LIVE_MATCH_WINDOW_HOURS = 2.5
-
-# NBA games last 3h+ with TV timeouts and potential overtime; a 2.5h window is
-# insufficient to guarantee a game has finished before evaluating or settling.
-NBA_LIVE_MATCH_WINDOW_HOURS = 3.5
 
 
 # ---------------------------------------------------------------------------
