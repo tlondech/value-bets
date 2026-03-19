@@ -13,12 +13,14 @@ Statistical signal finder for football, tennis, and NBA. Fetches live Winamax od
 main.py → pipeline/ → extractors/ + models/ → db/ + notifications/
 ```
 - `pipeline/fetch.py` — fetches odds + historical data, writes to SQLite
-- `pipeline/evaluate.py` — builds features, runs models, enriches with news
+- `pipeline/fetchers.py` — `LeagueFetcher` Protocol + `FetchResult` dataclass + sport-specific fetch strategies (`FootballFetcher`, `TennisFetcher`, `NBAFetcher`) + `FETCHERS` registry
+- `pipeline/evaluate.py` — builds features, runs models, enriches with news (football)
 - `pipeline/settlement.py` — resolves past signals (ESPN primary, tennis-data.co.uk fallback)
 - `models/features.py` — Dixon-Coles + H2H + fatigue (football)
 - `models/evaluator.py` — Poisson score matrix + EV (football)
 - `models/tennis_model.py` — surface-adjusted Elo + EV
 - `models/nba_model.py` — Gaussian efficiency model + EV
+- `models/sport_evaluators.py` — `SportEvaluator` Protocol + sport-specific evaluation strategies (`FootballEvaluator`, `TennisEvaluator`, `NBAEvaluator`) + `EVALUATORS` registry
 - `db/schema.py` — SQLAlchemy models (matches, odds, fixtures, bet_history)
 - `db/supabase.py` — remote persistence, settlement, pruning
 - `config.py` — `LeagueConfig` dataclass + `Config` dataclass + `load_config()`
@@ -46,6 +48,15 @@ Optional: `NEWS_API_KEY`, `ENABLED_LEAGUES`, `EV_THRESHOLD`, `ROLLING_WINDOW`, a
 
 ## CI
 GitHub Actions (`.github/workflows/daily_update.yml`) runs `python main.py --fetch` several times a day. Only commits the three crest map JSONs when they change. Does not commit `signals.db` or `index.html`.
+
+## Adding a new sport
+The pipeline uses a polymorphic strategy pattern. To add an other sport (e.g. NFL):
+1. Create `extractors/espn_nfl_client.py` implementing the `SportsExtractor` Protocol from `extractors/base.py`
+2. Add a `NFLEvaluator` class to `models/sport_evaluators.py` and register it: `EVALUATORS["american_football"] = NFLEvaluator()`
+3. Add a `NFLFetcher` class to `pipeline/fetchers.py` and register it: `FETCHERS["american_football"] = NFLFetcher()`
+4. Add the league config to `LEAGUES` in `config.py` with `sport_type="american_football"`
+
+`run_league_pipeline` in `pipeline/__init__.py` requires no changes.
 
 ## What to avoid
 - Don't import between `config.py` and `constants.py` circularly (only `constants.py → config.py` is allowed via the `_NBA_WINDOW` import)

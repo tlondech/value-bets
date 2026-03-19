@@ -199,12 +199,14 @@ All settings can be overridden via `.env`:
 │   ├── features.py                  # Feature engineering (Dixon-Coles, H2H, fatigue)
 │   ├── evaluator.py                 # Poisson probability + EV calculation (football)
 │   ├── tennis_model.py              # Surface-adjusted Elo ratings + EV calculation (tennis)
-│   └── nba_model.py                 # Gaussian efficiency model + EV calculation (basketball)
+│   ├── nba_model.py                 # Gaussian efficiency model + EV calculation (basketball)
+│   └── sport_evaluators.py          # SportEvaluator protocol + per-sport evaluation strategies + EVALUATORS registry
 │
 ├── pipeline/
-│   ├── __init__.py                  # Per-league orchestration (routes football / tennis / basketball)
+│   ├── __init__.py                  # Thin dispatch layer: routes each league to FETCHERS + EVALUATORS
 │   ├── fetch.py                     # Data fetching and SQLite persistence
-│   ├── evaluate.py                  # Feature building, match evaluation, news enrichment
+│   ├── fetchers.py                  # LeagueFetcher protocol + FetchResult + per-sport fetch strategies + FETCHERS registry
+│   ├── evaluate.py                  # Feature building, match evaluation, news enrichment (football)
 │   ├── helpers.py                   # Shared helpers (is_live, build_leg2_map)
 │   └── settlement.py                # Dual-source football settlement (football-data.org + .co.uk)
 │
