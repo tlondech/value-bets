@@ -31,8 +31,8 @@ function buildPnlData(records) {
   const values = [];
   for (const r of records) {
     const stake = stakeFor(r.odds);
-    if (r.result === 'won')  cumulative += (r.odds - 1) * stake;
-    if (r.result === 'lost') cumulative -= stake;
+    if (r.result === 'hit')  cumulative += (r.odds - 1) * stake;
+    if (r.result === 'miss') cumulative -= stake;
     labels.push((r.settled_at ?? r.kickoff ?? '').slice(0, 10));
     values.push(+cumulative.toFixed(2));
   }
@@ -56,8 +56,8 @@ function buildRoiData(records, granularity) {
     const b     = buckets.get(key);
     const stake = stakeFor(r.odds);
     b.staked += stake;
-    if (r.result === 'won')  b.pnl += (r.odds - 1) * stake;
-    if (r.result === 'lost') b.pnl -= stake;
+    if (r.result === 'hit')  b.pnl += (r.odds - 1) * stake;
+    if (r.result === 'miss') b.pnl -= stake;
   }
   const sorted = [...buckets.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
   return {
@@ -70,16 +70,16 @@ function buildSportData(records) {
   const sports = new Map();
   for (const r of records) {
     const sport = r.sport ?? 'football';
-    if (!sports.has(sport)) sports.set(sport, { wins: 0, losses: 0, pnl: 0, staked: 0 });
+    if (!sports.has(sport)) sports.set(sport, { hits: 0, misses: 0, pnl: 0, staked: 0 });
     const s     = sports.get(sport);
     const stake = stakeFor(r.odds);
     s.staked += stake;
-    if (r.result === 'won')  { s.wins++;   s.pnl += (r.odds - 1) * stake; }
-    if (r.result === 'lost') { s.losses++; s.pnl -= stake; }
+    if (r.result === 'hit')  { s.hits++;   s.pnl += (r.odds - 1) * stake; }
+    if (r.result === 'miss') { s.misses++; s.pnl -= stake; }
   }
   return [...sports.entries()].map(([sport, s]) => ({
     sport,
-    signals: s.wins + s.losses,
+    signals: s.hits + s.misses,
     roi:     s.staked ? +(s.pnl / s.staked * 100).toFixed(1) : 0,
     pnl:     +s.pnl.toFixed(0),
   }));

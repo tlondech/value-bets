@@ -360,7 +360,7 @@ def settle_signals(session) -> int:
             won = _settle_totals(row.outcome, hg, ag) or False
 
         row.settled = True
-        row.result = "won" if won else "lost"
+        row.result = "hit" if won else "miss"
         row.actual_home_score = hg
         row.actual_away_score = ag
         row.settled_at = now

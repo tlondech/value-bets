@@ -83,11 +83,16 @@ DIXON_COLES_GAMMA_BOUNDS = (0.0, 2.0)
 DIXON_COLES_RHO_BOUNDS = (-1.0, 1.0)
 
 # Optimizer stopping criteria
-DIXON_COLES_MAX_ITER = 500
-DIXON_COLES_FTOL = 1e-9
+DIXON_COLES_MAX_ITER = 1000
+DIXON_COLES_FTOL = 1e-7
 
 # Numerical floor applied to the Dixon-Coles τ correction to prevent zero/negative probability
 DIXON_COLES_RHO_FLOOR = 1e-10
+
+# L2 regularization strength applied to attack/defense parameters.
+# Shrinks sparse-data teams (cups, qualifiers) toward the mean, preventing
+# degenerate solutions when n_teams > n_fixtures.
+DIXON_COLES_L2_REG = 0.01
 
 
 # ---------------------------------------------------------------------------

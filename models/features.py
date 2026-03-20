@@ -18,6 +18,7 @@ from constants import (
     DIXON_COLES_INIT_RHO,
     DIXON_COLES_MAX_ITER,
     DIXON_COLES_MIN_FIXTURES,
+    DIXON_COLES_L2_REG,
     DIXON_COLES_RHO_BOUNDS,
     DIXON_COLES_RHO_FLOOR,
     DIXON_COLES_XI,
@@ -549,7 +550,11 @@ def fit_dixon_coles(
                 + y_eff * math.log(lam2) - lam2 - math.lgamma(y_eff + 1)
             )
             total += w * ll
-        return -total
+        # L2 penalty on attack/defense params (alpha[0] is fixed at 0, skip it)
+        l2 = DIXON_COLES_L2_REG * (
+            sum(a ** 2 for a in alpha[1:]) + sum(b ** 2 for b in beta)
+        )
+        return -total + l2
 
     # Parameter vector: α₁…α_{n-1}, β₀…β_{n-1}, γ, ρ  (length = 2n+1)
     x0 = np.zeros(2 * n + 1)
@@ -569,7 +574,7 @@ def fit_dixon_coles(
         x0,
         method="L-BFGS-B",
         bounds=bounds,
-        options={"maxiter": DIXON_COLES_MAX_ITER, "ftol": DIXON_COLES_FTOL},
+        options={"maxiter": DIXON_COLES_MAX_ITER, "maxfun": DIXON_COLES_MAX_ITER * 20, "ftol": DIXON_COLES_FTOL},
     )
     if not result.success:
         logger.warning("Dixon-Coles optimisation did not fully converge: %s", result.message)

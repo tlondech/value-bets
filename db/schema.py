@@ -77,7 +77,7 @@ class SignalHistory(Base):
     true_prob         = Column(Float,    nullable=False)
     ev                = Column(Float,    nullable=False)
     settled           = Column(Boolean,  default=False)
-    result            = Column(String,   nullable=True)    # "won" | "lost"
+    result            = Column(String,   nullable=True)    # "hit" | "miss"
     actual_home_score = Column(Integer,  nullable=True)
     actual_away_score = Column(Integer,  nullable=True)
     settled_at        = Column(DateTime, nullable=True)
@@ -95,6 +95,7 @@ class SignalHistory(Base):
     agg_away          = Column(Integer,  nullable=True)
     leg1_result       = Column(Text,     nullable=True)    # JSON object
     bookmaker_link    = Column(String,   nullable=True)
+    score_detail      = Column(Text,     nullable=True)    # e.g. "7-6(4) 6-4" (tennis only)
 
     __table_args__ = (
         UniqueConstraint("kickoff", "home_team", "away_team", "outcome",
@@ -126,6 +127,7 @@ def init_db(db_path: str):
             "ALTER TABLE signal_history ADD COLUMN leg1_result TEXT",
             "ALTER TABLE odds ADD COLUMN totals_line REAL",
             "ALTER TABLE signal_history ADD COLUMN bookmaker_link TEXT",
+            "ALTER TABLE signal_history ADD COLUMN score_detail TEXT",
         ]:
             try:
                 conn.execute(text(col_ddl))

@@ -101,7 +101,7 @@ def _tennis_sets(matched, home: str) -> tuple[int | None, int | None]:
 # ---------------------------------------------------------------------------
 
 _SETTLE_KEYS = frozenset({
-    "settled", "result", "settled_at", "actual_home_score", "actual_away_score"
+    "settled", "result", "settled_at", "actual_home_score", "actual_away_score", "score_detail"
 })
 
 
@@ -243,7 +243,7 @@ def settle_supabase_signals(supabase: Client, all_fixtures, name_map: dict | Non
             "away_team":         row["away_team"],
             "outcome":           row["outcome"],
             "settled":           True,
-            "result":            "won" if won else "lost",
+            "result":            "hit" if won else "miss",
             "actual_home_score": hg,
             "actual_away_score": ag,
             "settled_at":        settled_at,
@@ -323,12 +323,15 @@ def settle_tennis_supabase_signals(supabase: Client) -> int:
             "outcome":    row["outcome"],
             "kickoff":    row["kickoff"],
             "settled":    True,
-            "result":     "won" if won else "lost",
+            "result":     "hit" if won else "miss",
             "settled_at": settled_at,
         }
         if home_sets is not None:
             update["actual_home_score"] = home_sets
             update["actual_away_score"] = away_sets
+        score_str = matched.metadata.get("score")
+        if score_str:
+            update["score_detail"] = score_str
         rows_to_update.append(update)
 
     # Fallback: settle remaining unmatched signals via tennis-data.co.uk
@@ -373,7 +376,7 @@ def settle_tennis_supabase_signals(supabase: Client) -> int:
                 "outcome":    row["outcome"],
                 "kickoff":    row["kickoff"],
                 "settled":    True,
-                "result":     "won" if won else "lost",
+                "result":     "hit" if won else "miss",
                 "settled_at": settled_at,
             })
 
@@ -435,6 +438,9 @@ def backfill_tennis_scores(supabase: Client) -> int:
         # Override with corrected per-signal set counts (winner may be away_team for this signal)
         payload["actual_home_score"] = home_sets
         payload["actual_away_score"] = away_sets
+        score_str = matched.metadata.get("score")
+        if score_str:
+            payload["score_detail"] = score_str
         payload.pop("settled", None)  # don't flip settled=True on a backfill
 
         try:
@@ -561,7 +567,7 @@ def settle_nba_supabase_signals(
             "outcome":   outcome,
             "kickoff":   row["kickoff"],
             "settled":   True,
-            "result":    "won" if won else "lost",
+            "result":    "hit" if won else "miss",
             "actual_home_score": home_pts,
             "actual_away_score": away_pts,
             "settled_at": settled_at,

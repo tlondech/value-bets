@@ -50,12 +50,34 @@ function stakeFor(odds) {
 
 // ── Display constants ──────────────────────────────────────────
 export const LEAGUE_SHORT_NAMES = {
-  epl:        "EPL",
-  ucl:        "UCL",
-  laliga:     "La Liga",
-  bundesliga: "Bundesliga",
-  seriea:     "Serie A",
-  ligue1:     "Ligue 1",
+  // England
+  epl:          "EPL",
+  facup:        "FA Cup",
+  eflcup:       "EFL Cup",
+  // France
+  ligue1:       "Ligue 1",
+  ligue2:       "Ligue 2",
+  coupedefrance:"Coupe de France",
+  // Spain
+  laliga:       "La Liga",
+  copadelrey:   "Copa del Rey",
+  // Germany
+  bundesliga:   "Bundesliga",
+  dfbpokal:     "DFB-Pokal",
+  // Italy
+  seriea:       "Serie A",
+  coppaditalia: "Coppa Italia",
+  // UEFA
+  ucl:          "UCL",
+  uel:          "UEL",
+  uecl:         "UECL",
+  uefanations:  "Nations League",
+  euroqual:     "Euro Qual.",
+  // FIFA
+  worldcup:     "World Cup",
+  wcqualeurope: "WC Qual. EU",
+  // Basketball
+  nba:          "NBA",
 };
 const LEAGUE_TOTAL_MATCHDAYS = {
   epl:        38,
@@ -63,20 +85,49 @@ const LEAGUE_TOTAL_MATCHDAYS = {
   bundesliga: 34,
   seriea:     38,
   ligue1:     34,
+  ligue2:     38,
 };
 const LEAGUE_COLORS = {
-  epl:        "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
-  laliga:     "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
-  bundesliga: "bg-red-100    text-red-800    dark:bg-red-900/40    dark:text-red-300",
-  seriea:     "bg-blue-100   text-blue-800   dark:bg-blue-900/40   dark:text-blue-300",
-  ligue1:     "bg-green-100  text-green-800  dark:bg-green-900/40  dark:text-green-300",
-  ucl:        "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300",
-  nba:        "bg-red-100    text-red-800    dark:bg-red-950/60    dark:text-red-300",
+  // England
+  epl:          "bg-purple-100  text-purple-800  dark:bg-purple-900/40  dark:text-purple-300",
+  facup:        "bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-900/40 dark:text-fuchsia-300",
+  eflcup:       "bg-pink-100    text-pink-800    dark:bg-pink-900/40    dark:text-pink-300",
+  // France
+  ligue1:       "bg-green-100   text-green-800   dark:bg-green-900/40   dark:text-green-300",
+  ligue2:       "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+  coupedefrance:"bg-lime-100    text-lime-800    dark:bg-lime-900/40    dark:text-lime-300",
+  // Spain
+  laliga:       "bg-orange-100  text-orange-800  dark:bg-orange-900/40  dark:text-orange-300",
+  copadelrey:   "bg-amber-100   text-amber-800   dark:bg-amber-900/40   dark:text-amber-300",
+  // Germany
+  bundesliga:   "bg-red-100     text-red-800     dark:bg-red-900/40     dark:text-red-300",
+  dfbpokal:     "bg-rose-100    text-rose-800    dark:bg-rose-900/40    dark:text-rose-300",
+  // Italy
+  seriea:       "bg-blue-100    text-blue-800    dark:bg-blue-900/40    dark:text-blue-300",
+  coppaditalia: "bg-sky-100     text-sky-800     dark:bg-sky-900/40     dark:text-sky-300",
+  // UEFA
+  ucl:          "bg-indigo-100  text-indigo-800  dark:bg-indigo-900/40  dark:text-indigo-300",
+  uel:          "bg-orange-100  text-orange-800  dark:bg-orange-900/40  dark:text-orange-300",
+  uecl:         "bg-teal-100    text-teal-800    dark:bg-teal-900/40    dark:text-teal-300",
+  uefanations:  "bg-slate-100   text-slate-800   dark:bg-slate-800/60   dark:text-slate-300",
+  euroqual:     "bg-cyan-100    text-cyan-800    dark:bg-cyan-900/40    dark:text-cyan-300",
+  // FIFA
+  worldcup:     "bg-yellow-100  text-yellow-800  dark:bg-yellow-900/40  dark:text-yellow-300",
+  wcqualeurope: "bg-amber-100   text-amber-800   dark:bg-amber-900/40   dark:text-amber-300",
+  // Basketball
+  nba:          "bg-red-100     text-red-800     dark:bg-red-950/60     dark:text-red-300",
 };
+function leaguePillCls(key, isActive) {
+  const base = LEAGUE_COLORS[key]
+    || (key.startsWith("tennis_atp_") ? "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300"
+      : key.startsWith("tennis_wta_") ? "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300"
+      : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300");
+  return isActive ? `${base} ring-2 ring-current ring-offset-1` : `${base} opacity-70 hover:opacity-100`;
+}
 export const SPORTS = [
-  { key: "football",   label: "⚽️ Football" },
-  { key: "basketball", label: "🏀 Basketball" },
-  { key: "tennis",     label: "🎾 Tennis" },
+  { key: "football",   label: "Football" },
+  { key: "basketball", label: "Basketball" },
+  { key: "tennis",     label: "Tennis" },
 ];
 export const SPORT_EMOJI = { football: "⚽️", basketball: "🏀", tennis: "🎾" };
 export const SIGNAL_TYPES = {
@@ -109,7 +160,13 @@ const HIST_COLS = [
   { key: "league_name",   label: "League", render: r => `<span class="whitespace-nowrap">${leagueBadge(r.league_key, LEAGUE_SHORT_NAMES[r.league_key] || r.league_name)}</span>` },
   { key: "home_team",     label: "Match",  render: r => `<span class="whitespace-nowrap">${esc(r.home_team)} <span class="text-gray-400 mx-0.5">v</span> ${esc(r.away_team)}</span>` },
   { key: "outcome_label", label: "Selection",   labelHtml: `Selection${infoIcon("Highest-EV outcome identified by the model")}`, render: r => `<span class="whitespace-nowrap px-2 py-0.5 rounded-full text-xs font-medium ${signalBadgeCls(r.result, true)}">${esc(r.outcome_label)}</span>` },
-  { key: "_score",        label: "Score",  render: r => r.actual_home_score != null ? `${r.actual_home_score}–${r.actual_away_score}` : "—", sortKey: "actual_home_score", align: "center" },
+  { key: "_score",        label: "Score",  render: r => {
+    if (r.actual_home_score == null) return "—";
+    const isTennis = (r.league_key || "").startsWith("tennis_");
+    const txt = `${r.actual_home_score}–${r.actual_away_score}${isTennis ? " sets" : ""}`;
+    if (isTennis && r.score_detail) return `<span class="border-b border-dashed border-gray-400 dark:border-gray-500 cursor-default whitespace-nowrap" title="${esc(r.score_detail)}">${txt}</span>`;
+    return txt;
+  }, sortKey: "actual_home_score", align: "center" },
   { key: "odds",          label: "Odds",   labelHtml: `Odds${infoIcon("Decimal odds at time of signal detection")}`,  render: r => `<span class="font-mono">${Number(r.odds).toFixed(2)}</span>`, align: "right" },
   { key: "true_prob",     label: "Prob%",  labelHtml: `Prob%${infoIcon("Model's estimated win probability")}`, render: r => `${(r.true_prob * 100).toFixed(1)}%`, align: "right" },
   { key: "ev",            label: "EV%",    labelHtml: `EV%${infoIcon("Expected value — edge over the bookmaker")}`,  render: r => evLabel(r.ev), align: "right" },
@@ -151,8 +208,8 @@ function formBubbles(form) {
 }
 function signalBadgeCls(result, colored) {
   if (!colored) return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
-  if (result === "won")  return "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300";
-  if (result === "lost") return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
+  if (result === "hit")  return "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300";
+  if (result === "miss") return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
   return "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300";
 }
 
@@ -315,10 +372,17 @@ export function renderCard(m, opts = {}) {
     return esc(b.outcome_label);
   };
 
+  // Card-level result for history tinting
+  const cardResult = showResult
+    ? (m.signals.some(b => b.result === "hit") ? "hit"
+      : m.signals.some(b => b.result === "miss") ? "miss"
+      : null)
+    : null;
+
   const signalsRows = m.signals.map(b => `
     <tr class="border-t border-gray-100 dark:border-gray-700/50">
       <td class="py-1.5 pr-2">
-        <div class="max-w-full"><span class="inline-block max-w-full truncate px-2 py-0.5 rounded-full text-xs font-medium align-middle ${signalBadgeCls(b.result, showResult)}">${signalLabel(b)}</span></div>
+        <div class="max-w-full"><span class="inline-block max-w-full truncate px-2 py-0.5 rounded-full text-xs font-medium align-middle bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">${signalLabel(b)}</span></div>
       </td>
       <td class="py-1.5 pr-2 text-right font-mono text-sm">${Number(b.odds).toFixed(2)}</td>
       <td class="py-1.5 pr-2 text-right text-sm text-gray-500 dark:text-gray-400">${(b.true_prob * 100).toFixed(1)}%</td>
@@ -332,10 +396,17 @@ export function renderCard(m, opts = {}) {
   const headerAttr     = bookmakerHref ? `href="${esc(bookmakerHref)}" target="_blank" rel="noopener noreferrer"` : "";
   const headerHoverCls = bookmakerHref ? "hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer group/header" : "";
 
+  const cardCls = cardResult === "hit"
+    ? "bg-green-500/10 rounded-xl border border-gray-200 dark:border-gray-800 border-l-4 border-l-green-500 overflow-hidden"
+    : cardResult === "miss"
+    ? "bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden opacity-50 grayscale"
+    : "bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden";
+
   return `
-  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+  <div class="${cardCls}">
     <${headerTag} ${headerAttr} class="flex items-start justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700 ${headerHoverCls}">
       <div class="flex flex-wrap items-center gap-2 mr-3">
+        <span class="text-base leading-none">${SPORT_EMOJI[m.sport] || "🏆"}</span>
         ${isTennis ? `${tennisCircuitChip(m.league_key)}${tennisTournamentChip(m.league_name, m.surface, m.stage)}` : leagueBadge(m.league_key, badgeText)}
         ${m.is_second_leg ? `<span class="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded font-semibold whitespace-nowrap flex items-center gap-1">2nd Leg ${m.agg_home != null ? '<span class="opacity-70 font-normal">| Agg ' + m.agg_home + "–" + m.agg_away + "</span>" : ""}</span>` : ""}
         ${m.h2h_used ? `<span class="text-xs bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 rounded">H2H</span>` : ""}
@@ -399,14 +470,14 @@ export function renderLeaguePills(matches) {
   for (const m of matches) counts[m.league_key] = (counts[m.league_key] || { name: m.league_name, n: 0 });
   for (const m of matches) counts[m.league_key].n++;
 
-  const active   = "bg-indigo-600 text-white";
-  const inactive = "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400";
+  const allActive   = "bg-indigo-600 text-white";
+  const allInactive = "border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400";
 
-  let html = `<button class="league-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${state.activeLeague === "all" ? active : inactive}" data-league="all">
+  let html = `<button class="league-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${state.activeLeague === "all" ? allActive : allInactive}" data-league="all">
     All <span class="ml-1 opacity-70">(${matches.length})</span>
   </button>`;
   for (const [key, { name, n }] of Object.entries(counts)) {
-    html += `<button class="league-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${state.activeLeague === key ? active : inactive}" data-league="${esc(key)}">
+    html += `<button class="league-pill flex-shrink-0 px-3 py-1 rounded-full text-sm font-medium transition-colors ${leaguePillCls(key, state.activeLeague === key)}" data-league="${esc(key)}">
       ${esc(LEAGUE_SHORT_NAMES[key] || name)} <span class="ml-1 opacity-70">(${n})</span>
     </button>`;
   }
@@ -749,9 +820,9 @@ export function renderSignalsPanel() {
 
 // ── History stats grid ─────────────────────────────────────────
 export function updateStatsGrid(filteredData) {
-  const wins    = filteredData.filter(r => r.result === "won");
-  const losses  = filteredData.filter(r => r.result === "lost");
-  const settled = wins.length + losses.length;
+  const hits    = filteredData.filter(r => r.result === "hit");
+  const misses  = filteredData.filter(r => r.result === "miss");
+  const settled = hits.length + misses.length;
 
   const avgOdds = filteredData.length
     ? (filteredData.reduce((s, r) => s + r.odds, 0) / filteredData.length).toFixed(2)
@@ -760,23 +831,23 @@ export function updateStatsGrid(filteredData) {
     ? "+" + (filteredData.reduce((s, r) => s + r.ev, 0) / filteredData.length * 100).toFixed(1) + "%"
     : "—";
 
-  const expectedWins = settled
-    ? [...wins, ...losses].reduce((s, r) => s + (r.true_prob || 0), 0)
+  const expectedHits = settled
+    ? [...hits, ...misses].reduce((s, r) => s + (r.true_prob || 0), 0)
     : 0;
   const recordHtml = settled
-    ? `${wins.length}W <span class="text-sm font-medium text-gray-400 dark:text-gray-500 mx-0.5">/ ${expectedWins.toFixed(1)}EW</span>`
+    ? `${hits.length}H <span class="text-sm font-medium text-gray-400 dark:text-gray-500 mx-0.5">/ ${expectedHits.toFixed(1)}EH</span>`
     : "—";
 
-  const winRateColor = settled
-    ? (wins.length >= losses.length ? "text-green-500" : "text-red-500")
+  const hitRateColor = settled
+    ? (hits.length >= misses.length ? "text-green-500" : "text-red-500")
     : "";
-  const winRateHtml = settled
-    ? `<span class="${winRateColor}">${losses.length ? (wins.length / losses.length * 100).toFixed(1) : "∞"}%</span>`
+  const hitRateHtml = settled
+    ? `<span class="${hitRateColor}">${misses.length ? (hits.length / misses.length * 100).toFixed(1) : "∞"}%</span>`
     : "—";
 
-  const pnl    = wins.reduce((s, r)   => s + (r.odds - 1) * stakeFor(r.odds), 0)
-               + losses.reduce((s, r) => s - stakeFor(r.odds), 0);
-  const staked = [...wins, ...losses].reduce((s, r) => s + stakeFor(r.odds), 0);
+  const pnl    = hits.reduce((s, r)   => s + (r.odds - 1) * stakeFor(r.odds), 0)
+               + misses.reduce((s, r) => s - stakeFor(r.odds), 0);
+  const staked = [...hits, ...misses].reduce((s, r) => s + stakeFor(r.odds), 0);
   const roi    = staked ? (pnl / staked * 100).toFixed(1) : null;
   const pnlStr = staked
     ? `€${staked.toFixed(0)} · ${pnl >= 0 ? "+" : ""}€${pnl.toFixed(0)} · ${roi}%`
@@ -797,7 +868,7 @@ export function updateStatsGrid(filteredData) {
     ? `${avgOdds} <span class="text-sm font-medium text-gray-400 dark:text-gray-500">/ ${avgEv}</span>`
     : "—");
   setHtml("stat-record",  recordHtml);
-  setHtml("stat-winrate", winRateHtml);
+  setHtml("stat-winrate", hitRateHtml);
   setHtml("stat-pnl",     pnlStr);
   if (staked) setColor("stat-pnl", pnl >= 0);
 }
@@ -806,11 +877,11 @@ export function updateStatsGrid(filteredData) {
 export function renderHistory() {
   renderDatePills();
 
-  const allRows = state.histData.map(r => ({ ...r, _status: r.result === "won" ? "won" : "lost" }));
+  const allRows = state.histData.map(r => ({ ...r, _status: r.result === "hit" ? "hit" : "miss" }));
   const tabCounts = {
     settled: allRows.length,
-    won:     allRows.filter(r => r._status === "won").length,
-    lost:    allRows.filter(r => r._status === "lost").length,
+    hit:     allRows.filter(r => r._status === "hit").length,
+    miss:    allRows.filter(r => r._status === "miss").length,
     pending: state.pendingData.length,
   };
 
@@ -819,7 +890,7 @@ export function renderHistory() {
     btn.className = isActive
       ? "hist-status-btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400"
       : "hist-status-btn inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors bg-white border border-gray-200 text-gray-600 dark:bg-gray-900 dark:border-gray-800 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-700";
-    const label = { settled: "Settled", won: "Won", lost: "Lost", pending: "Pending" }[btn.dataset.status];
+    const label = { settled: "Settled", hit: "Hit", miss: "Miss", pending: "Pending" }[btn.dataset.status];
     const n = tabCounts[btn.dataset.status] ?? 0;
     btn.innerHTML = `${label} <span class="text-xs opacity-60">(${n})</span>`;
   });
