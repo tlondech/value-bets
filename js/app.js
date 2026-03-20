@@ -175,7 +175,7 @@ async function init() {
   }
 
   if (!sub || !["active", "trialing"].includes(sub.status)) {
-    await startCheckout(session);
+    await startCheckout();
     return;
   }
 
@@ -191,7 +191,7 @@ async function init() {
       const existing = document.getElementById("account-dropdown");
       if (existing) { existing.remove(); return; }
       btn.closest("div.relative").insertAdjacentHTML("beforeend", renderAccountMenu(session, sub));
-      attachAccountMenuListeners(session, sub);
+      attachAccountMenuListeners(sub);
     });
   });
   document.addEventListener("click", () => {
@@ -403,6 +403,7 @@ init();
 // Global fixed tooltip for .info-icon elements (avoids overflow-x-auto clipping)
 const _gtt = document.getElementById("global-tooltip");
 document.addEventListener("mouseenter", e => {
+  if (!(e.target instanceof Element)) return;
   const icon = e.target.closest(".info-icon");
   if (!icon || !_gtt) return;
   const bubble = icon.querySelector("span");
@@ -431,7 +432,7 @@ document.addEventListener("mouseenter", e => {
   _gtt.style.top  = top  + "px";
 }, true);
 document.addEventListener("mouseleave", e => {
-  if (!e.target.closest(".info-icon") || !_gtt) return;
+  if (!(e.target instanceof Element) || !e.target.closest(".info-icon") || !_gtt) return;
   _gtt.classList.remove("visible");
 }, true);
 
@@ -456,12 +457,13 @@ let _tipHideTimer = null;
 let _lastTipTouch = 0;
 document.addEventListener("mouseenter", e => {
   if (Date.now() - _lastTipTouch < 500) return;
+  if (!(e.target instanceof Element)) return;
   const el = e.target.closest(_TIP_SEL);
   if (el) _showTennisTip(el);
 }, true);
 document.addEventListener("mouseleave", e => {
   if (Date.now() - _lastTipTouch < 500) return;
-  if (e.target.closest(_TIP_SEL) && _gtt) _gtt.classList.remove("visible");
+  if (e.target instanceof Element && e.target.closest(_TIP_SEL) && _gtt) _gtt.classList.remove("visible");
 }, true);
 document.addEventListener("touchend", e => {
   const el = e.target.closest(_TIP_SEL);

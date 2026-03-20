@@ -60,6 +60,11 @@ The pipeline uses a polymorphic strategy pattern. To add an other sport (e.g. NF
 
 `run_league_pipeline` in `pipeline/__init__.py` requires no changes.
 
+## After editing a file
+- Check for stale references: any imports, call sites, or type signatures that reference removed/renamed symbols
+- Check for dead code: exported functions with no call sites, parameters no longer used, variables only written but never read
+- Remove dead code rather than leaving it commented out or orphaned
+
 ## What to avoid
 - Don't import between `config.py` and `constants.py` circularly (only `constants.py → config.py` is allowed via the `_NBA_WINDOW` import)
 - Don't add league keys to `LEAGUES` without also updating `data/team_name_map.json`

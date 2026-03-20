@@ -7,6 +7,11 @@ export async function getSession() {
   return session;
 }
 
+export async function getFreshToken() {
+  const { data: { session } } = await sb.auth.getSession();
+  return session?.access_token ?? null;
+}
+
 export async function signInWithMagicLink(email) {
   const { error } = await sb.auth.signInWithOtp({
     email,
