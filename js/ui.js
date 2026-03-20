@@ -175,7 +175,7 @@ const HIST_COLS = [
     const isBasketball = r.sport === "basketball" || r.league_key === "nba";
     const txt = `${r.actual_home_score}–${r.actual_away_score}`;
     const scoreSpan = isTennis && r.score_detail
-      ? `<span class="border-b border-dashed border-gray-400 dark:border-gray-500 cursor-default whitespace-nowrap" title="${esc(orientSetScores(r.score_detail, r.actual_home_score, r.actual_away_score))}">${txt}</span>`
+      ? `<span class="tennis-score-tip border-b border-dashed border-gray-400 dark:border-gray-500 cursor-default whitespace-nowrap" data-tip="${esc(orientSetScores(r.score_detail, r.actual_home_score, r.actual_away_score))}">${txt}</span>`
       : `<span class="whitespace-nowrap">${txt}</span>`;
     const isTotal = isBasketball && r.outcome && (r.outcome.startsWith("over_") || r.outcome.startsWith("under_"));
     const mathCtx = isTotal
@@ -210,7 +210,7 @@ function tennisCircuitChip(leagueKey) {
   const isATP = leagueKey.startsWith("tennis_atp_");
   const label = isATP ? "ATP" : "WTA";
   const cls   = isATP ? TENNIS_ATP_CLS : TENNIS_WTA_CLS;
-  return `<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${cls}">${label}</span>`;
+  return `<span class="inline-flex items-center leading-none px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${cls}">${label}</span>`;
 }
 function tennisTournamentChip(name, surface, round) {
   const cleanName = name.replace(/^(ATP|WTA)\s+/i, "").trim();
@@ -219,7 +219,7 @@ function tennisTournamentChip(name, surface, round) {
   const cls  = surface === "Clay"  ? "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300"
              : surface === "Grass" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
              :                       "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300";
-  return `<span class="inline-block px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${cls}">${esc(text)}</span>`;
+  return `<span class="inline-flex items-center leading-none px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${cls}">${esc(text)}</span>`;
 }
 function formBubbles(form) {
   if (!Array.isArray(form) || form.length === 0) return "";
@@ -344,7 +344,7 @@ export function renderCard(m, opts = {}) {
     if (isTennis) {
       const txt = `${m.actual_home_score}–${m.actual_away_score}`;
       score = m.score_detail
-        ? `<span class="text-sm font-bold tabular-nums border-b border-dashed border-gray-400 dark:border-gray-500 cursor-default" title="${esc(orientSetScores(m.score_detail, m.actual_home_score, m.actual_away_score))}">${txt}</span>`
+        ? `<span class="tennis-score-tip text-sm font-bold tabular-nums border-b border-dashed border-gray-400 dark:border-gray-500 cursor-default" data-tip="${esc(orientSetScores(m.score_detail, m.actual_home_score, m.actual_away_score))}">${txt}</span>`
         : `<span class="text-sm font-bold tabular-nums">${txt}</span>`;
     } else {
       score = `<span class="text-sm font-bold tabular-nums">${m.actual_home_score}–${m.actual_away_score}</span>`;
@@ -391,10 +391,10 @@ export function renderCard(m, opts = {}) {
 
   return `
   <div class="${cardCls}">
-    <${headerTag} ${headerAttr} class="flex items-start justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700 ${headerHoverCls}">
-      <div class="flex flex-wrap items-center gap-2 mr-3">
-        <span class="text-base leading-none">${SPORT_EMOJI[m.sport] || "🏆"}</span>
-        ${isTennis ? `${tennisCircuitChip(m.league_key)}${tennisTournamentChip(m.league_name, m.surface, m.stage)}` : leagueBadge(m.league_key, badgeText)}
+    <${headerTag} ${headerAttr} class="flex items-center justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700 ${headerHoverCls}">
+      <div class="flex flex-wrap items-center gap-2 mr-3 min-w-0">
+        <span class="text-base leading-none shrink-0">${SPORT_EMOJI[m.sport] || "🏆"}</span>
+        ${isTennis ? `<div class="flex items-center gap-1.5 flex-wrap min-w-0">${tennisCircuitChip(m.league_key)}<span class="min-w-0">${tennisTournamentChip(m.league_name, m.surface, m.stage)}</span></div>` : leagueBadge(m.league_key, badgeText)}
         ${m.is_second_leg ? `<span class="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2 py-0.5 rounded font-semibold whitespace-nowrap flex items-center gap-1">2nd Leg ${m.agg_home != null ? '<span class="opacity-70 font-normal">| Agg ' + m.agg_home + "–" + m.agg_away + "</span>" : ""}</span>` : ""}
         ${m.h2h_used ? `<span class="text-xs bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 px-1.5 rounded">H2H</span>` : ""}
       </div>

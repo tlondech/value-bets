@@ -428,3 +428,35 @@ document.addEventListener("mouseleave", e => {
   if (!e.target.closest(".info-icon") || !_gtt) return;
   _gtt.classList.remove("visible");
 }, true);
+
+// Tennis set-score tooltip — works on both hover and tap
+function _showTennisTip(el) {
+  if (!_gtt) return;
+  const tip = el.dataset.tip;
+  if (!tip) return;
+  _gtt.textContent = tip;
+  _gtt.classList.add("visible");
+  _gtt.style.top = "0"; _gtt.style.left = "0";
+  const tw = _gtt.offsetWidth, th = _gtt.offsetHeight;
+  const ir = el.getBoundingClientRect();
+  const gap = 6;
+  const left = Math.min(Math.max(ir.left + ir.width / 2 - tw / 2, 4), window.innerWidth - tw - 4);
+  const top  = ir.top - th - gap < 0 ? ir.bottom + gap : ir.top - th - gap;
+  _gtt.style.left = left + "px";
+  _gtt.style.top  = top  + "px";
+}
+document.addEventListener("mouseenter", e => {
+  const el = e.target.closest(".tennis-score-tip");
+  if (el) _showTennisTip(el);
+}, true);
+document.addEventListener("mouseleave", e => {
+  if (e.target.closest(".tennis-score-tip") && _gtt) _gtt.classList.remove("visible");
+}, true);
+document.addEventListener("touchstart", e => {
+  const el = e.target.closest(".tennis-score-tip");
+  if (!el || !_gtt) return;
+  e.stopPropagation();
+  _showTennisTip(el);
+  const hide = () => { _gtt.classList.remove("visible"); document.removeEventListener("touchstart", hide, true); };
+  setTimeout(() => document.addEventListener("touchstart", hide, true), 0);
+}, true);
