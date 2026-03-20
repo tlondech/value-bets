@@ -1,24 +1,12 @@
 # ---------------------------------------------------------------------------
-# Team news enrichment
+# Injury enrichment
 # ---------------------------------------------------------------------------
 
-# Minimum EV for a signal to trigger team news fetching
+# Minimum EV for a signal to trigger injury context fetching
 EV_NEWS_THRESHOLD = 0.20
 
-# Hours before kickoff within which team news is fetched
+# Hours before kickoff within which injury context is fetched
 TEAM_NEWS_CUTOFF_HOURS = 24
-
-# Fallback look-back window (days) when rest_days is unavailable for a team
-NEWS_DAYS_BACK_DEFAULT = 5
-
-# Number of articles fetched per team from NewsAPI (pre-relevance-filter)
-NEWS_FETCH_SIZE = 7
-
-# Maximum number of injury/suspension sentences surfaced per team
-TOP_NEWS_SENTENCES = 2
-
-# Timeout for NewsAPI requests (seconds)
-NEWSAPI_TIMEOUT = 10
 
 
 # ---------------------------------------------------------------------------
@@ -131,6 +119,9 @@ FOOTBALLDATA_COUK_TIMEOUT = 30  # seconds
 # football-data.org (free tier: 10 req/min → 1 req per 6 s; 6.5 s adds safety margin)
 FOOTBALLDATA_ORG_MIN_INTERVAL = 6.5  # seconds between requests
 FOOTBALLDATA_ORG_TIMEOUT = 30        # seconds
+
+# ESPN public API (no key required)
+ESPN_API_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports"
 
 
 # ---------------------------------------------------------------------------

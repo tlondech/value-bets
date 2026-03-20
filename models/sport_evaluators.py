@@ -308,6 +308,8 @@ class NBAEvaluator:
                 "Add entries to data/team_name_map.json[\"nba\"].",
                 n_unmapped,
             )
+
+        enrich_with_news(signals, cfg)
         return signals
 
 

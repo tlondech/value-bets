@@ -72,7 +72,6 @@ _LEAGUES_BY_KEY: dict[str, LeagueConfig] = {lg.key: lg for lg in LEAGUES}
 class Config:
     # API credentials
     odds_api_key: str
-    news_api_key: str = ""             # NewsAPI key; optional — enables team news context for EV ≥ 20% signals
 
     # Leagues to process in this run
     enabled_leagues: list[LeagueConfig] = field(default_factory=lambda: list(LEAGUES))
@@ -141,7 +140,6 @@ def load_config() -> Config:
 
     return Config(
         odds_api_key=os.environ["THE_ODDS_API_KEY"],
-        news_api_key=os.getenv("NEWS_API_KEY", ""),
         enabled_leagues=enabled,
         ev_threshold=float(os.getenv("EV_THRESHOLD", "0.05")),
         rolling_window=int(os.getenv("ROLLING_WINDOW", "5")),

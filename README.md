@@ -14,7 +14,7 @@ For each upcoming match across supported leagues:
 4. **Computes expected goals** (λ) per team, adjusted for fatigue, rest days, and UCL second-leg aggregate dynamics
 5. **Builds a score probability matrix** via Poisson distribution with Dixon-Coles low-score correction
 6. **Calculates Expected Value** (EV = true_prob × decimal_odds − 1) for each outcome; caps the model/implied probability ratio to filter out hallucinated high-EV signals; surfaces only the highest-EV signal per market group (1X2, O/U)
-7. **Fetches team news** (optional) — for signals with EV ≥ 20% within 24h of kickoff, pulls injury/suspension context from NewsAPI using rule-based sentence extraction
+7. **Fetches injury context** — for signals with EV ≥ 20% within 24h of kickoff, pulls structured injury/suspension data from ESPN's free public API (no key required)
 
 ### Tennis pipeline
 
@@ -98,7 +98,6 @@ Edit `.env` and fill in your keys:
 THE_ODDS_API_KEY=your_key_here         # required — https://the-odds-api.com (500 free req/month)
 SUPABASE_URL=your_supabase_url         # required — https://supabase.com
 SUPABASE_ANON_KEY=your_anon_key        # required — Supabase project anon key
-NEWS_API_KEY=your_key_here             # optional — https://newsapi.org (100 req/day free tier)
 ```
 
 ### 3. Run
@@ -148,7 +147,6 @@ All settings can be overridden via `.env`:
 | `THE_ODDS_API_KEY` | — | The Odds API key (required) |
 | `SUPABASE_URL` | — | Supabase project URL (required) |
 | `SUPABASE_ANON_KEY` | — | Supabase project anon key (required) |
-| `NEWS_API_KEY` | `""` | NewsAPI key (optional — enables team news for signals with EV ≥ 20% within 24h of kickoff) |
 | `ENABLED_LEAGUES` | all | Comma-separated league keys, e.g. `epl,laliga,nba` (tennis is always auto-discovered) |
 | `EV_THRESHOLD` | `0.05` | Minimum EV to surface a signal (5%) |
 | `ROLLING_WINDOW` | `5` | Number of recent matches for rolling stats (football); doubled for NBA |
@@ -193,7 +191,8 @@ All settings can be overridden via `.env`:
 │   ├── tennisdatauk_client.py       # tennis-data.co.uk CSVs (tennis settlement fallback)
 │   ├── odds.py                      # The Odds API client (1X2, O/U, spreads, tennis discovery)
 │   ├── stats.py                     # Stats processing utilities
-│   └── team_news.py                 # NewsAPI client — injury/suspension context for high-EV signals
+│   ├── espn_injuries_client.py      # ESPN injury data (no API key required)
+│   └── team_news.py                 # Injury context enrichment for high-EV signals (ESPN)
 │
 ├── models/
 │   ├── features.py                  # Feature engineering (Dixon-Coles, H2H, fatigue)
@@ -292,8 +291,8 @@ EV = (model_probability × decimal_odds) − 1
 
 A positive EV indicates the model estimates a higher probability than the bookmaker's implied odds. Signals are only surfaced when EV > threshold (default 5%).
 
-### Team News Enrichment (football only)
-When `NEWS_API_KEY` is set, the pipeline fetches recent articles from NewsAPI for both teams in high-EV football signals (EV ≥ 20%) scheduled within the next 24 hours. A rule-based extractor surfaces the top injury and suspension sentences per team — no LLM required.
+### Injury Context Enrichment (football + NBA)
+For high-EV signals (EV ≥ 20%) scheduled within the next 24 hours, the pipeline fetches structured injury and suspension data from ESPN's free public API — no API key required. Up to 3 absences per team are surfaced with player name, status, and injury type.
 
 ---
 
@@ -309,7 +308,7 @@ Interactive SPA dashboard — frontend logic lives in `js/` as plain ES modules 
 - Team form and logos (basketball)
 - Player flag icons (tennis)
 - UCL aggregate context for second legs
-- Team news (injury/suspension context) for high-EV football signals near kickoff (requires `NEWS_API_KEY`)
+- Injury context for high-EV football and NBA signals near kickoff (ESPN public API, no key required)
 - Signal history with won/lost outcomes, stats grid (record, win rate, P&L/ROI), infinite scroll
 - Removable active-filter chips
 
@@ -342,4 +341,3 @@ On every run, unsettled future signals that are no longer in the detected set ar
 | [Jeff Sackmann / tennis_atp](https://github.com/JeffSackmann/tennis_atp) | ATP historical match data for Elo ratings | Free (GitHub) |
 | [Jeff Sackmann / tennis_wta](https://github.com/JeffSackmann/tennis_wta) | WTA historical match data for Elo ratings | Free (GitHub) |
 | [tennis-data.co.uk](http://www.tennis-data.co.uk) | Tennis settlement fallback (CSV) | Free |
-| [NewsAPI](https://newsapi.org) | Team news and injury context (optional) | 100 req/day free tier |

@@ -13,9 +13,9 @@ from datetime import datetime as _datetime
 
 import requests
 
-logger = logging.getLogger(__name__)
+from constants import ESPN_API_BASE_URL
 
-_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports"
+logger = logging.getLogger(__name__)
 _RATE_LIMIT_SECONDS = 0.3
 _TIMEOUT = 30
 
@@ -47,7 +47,7 @@ class ESPNClient(ABC):
         on any network / parse failure.
         """
         date_range = f"{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}"
-        url = f"{_BASE_URL}/{sport}/{league}/scoreboard"
+        url = f"{ESPN_API_BASE_URL}/{sport}/{league}/scoreboard"
         try:
             time.sleep(_RATE_LIMIT_SECONDS)
             r = requests.get(

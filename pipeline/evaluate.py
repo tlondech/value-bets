@@ -296,13 +296,11 @@ def evaluate_matches(
 
 def enrich_with_news(signals: list[dict], cfg) -> None:
     """
-    Fetches team news for high-EV matches within 24h of kickoff.
+    Fetches injury context for high-EV matches within 24h of kickoff.
     Mutates signals in place.
     """
-    if not cfg.news_api_key:
-        return
-
-    from constants import EV_NEWS_THRESHOLD, NEWS_DAYS_BACK_DEFAULT
+    from config import _LEAGUES_BY_KEY
+    from constants import EV_NEWS_THRESHOLD
     from extractors.team_news import fetch_team_news
 
     now_utc = datetime.now(timezone.utc)
@@ -314,16 +312,16 @@ def enrich_with_news(signals: list[dict], cfg) -> None:
             kickoff = kickoff.replace(tzinfo=timezone.utc)
         hours_until_kickoff = (kickoff - now_utc).total_seconds() / 3600
         if hours_until_kickoff <= TEAM_NEWS_CUTOFF_HOURS:
-            days_back = max(
-                match.get("home_rest_days") or NEWS_DAYS_BACK_DEFAULT,
-                match.get("away_rest_days") or NEWS_DAYS_BACK_DEFAULT,
-            )
+            league_key = match.get("league_key", "")
+            league_config = _LEAGUES_BY_KEY.get(league_key)
+            sport_type = league_config.sport_type if league_config else "football"
             match["team_news"] = fetch_team_news(
-                match["home_team"], match["away_team"], cfg.news_api_key,
-                days_back=days_back,
+                match["home_team"], match["away_team"],
+                sport_type=sport_type,
+                league_key=league_key,
             )
             logger.info(
-                "[%s] Fetched team news for %s vs %s (EV %.0f%%, kickoff in %.1fh)",
+                "[%s] Fetched injury context for %s vs %s (EV %.0f%%, kickoff in %.1fh)",
                 match["league_name"],
                 match["home_team"], match["away_team"],
                 max(b["ev"] for b in match["signals"]) * 100,

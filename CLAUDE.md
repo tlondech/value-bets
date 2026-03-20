@@ -14,7 +14,7 @@ main.py → pipeline/ → extractors/ + models/ → db/ + notifications/
 ```
 - `pipeline/fetch.py` — fetches odds + historical data, writes to SQLite
 - `pipeline/fetchers.py` — `LeagueFetcher` Protocol + `FetchResult` dataclass + sport-specific fetch strategies (`FootballFetcher`, `TennisFetcher`, `NBAFetcher`) + `FETCHERS` registry
-- `pipeline/evaluate.py` — builds features, runs models, enriches with news (football)
+- `pipeline/evaluate.py` — builds features, runs models, enriches with injury context (football + NBA)
 - `pipeline/settlement.py` — resolves past signals (ESPN primary, tennis-data.co.uk fallback)
 - `models/features.py` — Dixon-Coles + H2H + fatigue (football)
 - `models/evaluator.py` — Poisson score matrix + EV (football)
@@ -44,7 +44,7 @@ Plain ES modules, no bundler. Files in `js/`: `app.js`, `ui.js`, `api.js`, `stat
 
 ## Environment variables
 Required: `THE_ODDS_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`
-Optional: `NEWS_API_KEY`, `ENABLED_LEAGUES`, `EV_THRESHOLD`, `ROLLING_WINDOW`, and other model params
+Optional: `ENABLED_LEAGUES`, `EV_THRESHOLD`, `ROLLING_WINDOW`, and other model params
 
 ## CI
 GitHub Actions (`.github/workflows/daily_update.yml`) runs `python main.py --fetch` several times a day. Only commits the three crest map JSONs when they change. Does not commit `signals.db` or `index.html`.
