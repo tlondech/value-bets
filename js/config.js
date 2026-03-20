@@ -6,7 +6,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 export const TRIAL_DAYS = 14;
 
 export const SUPABASE_URL = "https://uteiydpfxybtjzmdvsgc.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0ZWl5ZHBmeHlidGp6bWR2c2djIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTY1ODYsImV4cCI6MjA4ODk5MjU4Nn0.bAIiJpwEjNdZojaVBd6-hnQA_lH9CgO65kKbihyGsGw";
+const SUPABASE_KEY = "sb_publishable_v2PxaiIgMqJs404xFYlYsg_S_3aHvTo";
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true },
