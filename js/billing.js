@@ -8,7 +8,7 @@ export async function fetchSubscription(userId) {
     .from("subscriptions")
     .select("status, current_period_end, trial_used")
     .eq("user_id", userId)
-    .single();
+    .maybeSingle();
   return data; // null if no row yet
 }
 

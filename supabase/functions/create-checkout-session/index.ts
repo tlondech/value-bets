@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     .from("subscriptions")
     .select("stripe_customer_id, trial_used")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   // Look up or create Stripe Customer
   let stripeCustomerId: string;
