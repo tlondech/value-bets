@@ -65,6 +65,12 @@ class _ColoredFormatter(logging.Formatter):
 _FMT  = "%(asctime)s [%(levelname)s]  %(message)s"
 _DATE = "%H:%M:%S"
 
+_SPORT_LABEL = {
+    "football":   "FOOTBALL",
+    "tennis":     "TENNIS",
+    "basketball": "NBA",
+}
+
 os.makedirs("logs", exist_ok=True)
 
 _file_handler = logging.FileHandler("logs/run.log", encoding="utf-8")
@@ -153,22 +159,6 @@ def _init_nba(cfg) -> None:
         logger.warning("NBA ratings computation failed — NBA will be skipped: %s", e)
 
 
-# ---------------------------------------------------------------------------
-# Logging summary
-# ---------------------------------------------------------------------------
-
-def _log_enabled_leagues(cfg) -> None:
-    football_leagues    = [lg for lg in cfg.enabled_leagues if lg.sport_type == "football"]
-    tennis_tournaments  = [lg for lg in cfg.enabled_leagues if lg.sport_type == "tennis"]
-    basketball_leagues  = [lg for lg in cfg.enabled_leagues if lg.sport_type == "basketball"]
-    all_football        = [lg for lg in _ALL_LEAGUES if lg.sport_type == "football"]
-    n_skipped           = len(all_football) - len(football_leagues)
-    suffix = f"  (+ {n_skipped} skipped)" if n_skipped else ""
-    logger.info("Football: %s%s", ", ".join(lg.display_name for lg in football_leagues), suffix)
-    if tennis_tournaments:
-        logger.info("Tennis: %s", ", ".join(lg.display_name for lg in tennis_tournaments))
-    if basketball_leagues:
-        logger.info("Basketball: %s", ", ".join(lg.display_name for lg in basketball_leagues))
 
 
 # ---------------------------------------------------------------------------
@@ -208,33 +198,61 @@ def run_pipeline(force_fetch: bool = False, dry_run: bool = False) -> None:
     engine = init_db(cfg.db_path)
     name_map = load_team_name_map(cfg.team_map_path)
 
+    # ── INIT ──────────────────────────────────────────────────────────────────
+    logger.info("── INIT ──")
     _init_tennis(cfg)
-    _log_enabled_leagues(cfg)
     _init_nba(cfg)
 
     supabase = get_supabase_client()
 
+    # Group leagues by sport type, preserving config order
+    leagues_by_sport: dict[str, list] = {}
+    for league in cfg.enabled_leagues:
+        leagues_by_sport.setdefault(league.sport_type, []).append(league)
+
     all_signals: list[dict] = []
     all_raw_fixtures: list[dict] = []
-    for league in cfg.enabled_leagues:
-        league_signals, raw_fixtures = run_league_pipeline(
-            league, cfg, engine, name_map, force_fetch=force_fetch, dry_run=dry_run,
-        )
-        all_signals.extend(league_signals)
-        all_raw_fixtures.extend(raw_fixtures)
+    signals_by_sport: dict[str, int] = {}
+
+    for sport_type, leagues in leagues_by_sport.items():
+        label = _SPORT_LABEL.get(sport_type, sport_type.upper())
+        logger.info("")
+        logger.info("── %s  (%d) ──", label, len(leagues))
+        sport_signals = 0
+        for league in leagues:
+            league_signals, raw_fixtures = run_league_pipeline(
+                league, cfg, engine, name_map, force_fetch=force_fetch, dry_run=dry_run,
+            )
+            all_signals.extend(league_signals)
+            all_raw_fixtures.extend(raw_fixtures)
+            sport_signals += sum(len(m["signals"]) for m in league_signals)
+        signals_by_sport[sport_type] = sport_signals
 
     if dry_run:
         return
 
-    all_signals.sort(key=lambda x: x["kickoff"])
-    total_signals = sum(len(m["signals"]) for m in all_signals)
-    logger.info(
-        "Total: %d signals across %d matches  (%.1f sec)",
-        total_signals, len(all_signals), time.monotonic() - t0,
-    )
-
+    # ── SETTLEMENT ────────────────────────────────────────────────────────────
+    logger.info("")
+    logger.info("── SETTLEMENT ──")
     settle_all_sports(supabase, cfg, all_raw_fixtures, name_map, force_fetch)
+
+    # ── PERSIST ───────────────────────────────────────────────────────────────
+    logger.info("")
+    logger.info("── PERSIST ──")
+    all_signals.sort(key=lambda x: x["kickoff"])
     _persist(supabase, engine, all_signals, {lg.key for lg in cfg.enabled_leagues})
+
+    # ── DONE ──────────────────────────────────────────────────────────────────
+    total_signals = sum(len(m["signals"]) for m in all_signals)
+    parts = [
+        f"{_SPORT_LABEL.get(s, s.upper())}: {n}"
+        for s, n in signals_by_sport.items()
+    ]
+    logger.info("")
+    logger.info(
+        "── DONE ──  %s  →  %d total  (%.1f sec)",
+        "  ·  ".join(parts), total_signals, time.monotonic() - t0,
+    )
 
     webbrowser.open(LOCAL_REPORT_URL)
 
@@ -249,7 +267,9 @@ def main() -> None:
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    logger.info("══ Signal Arena ══  %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    logger.info("════════════════════════════════════════")
+    logger.info("  Signal Arena  ·  %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    logger.info("════════════════════════════════════════")
     try:
         run_pipeline(force_fetch=args.fetch, dry_run=args.dry_run)
     except Exception as e:

@@ -34,6 +34,8 @@ from constants import (
 
 logger = logging.getLogger(__name__)
 
+_warned_unmapped: set[tuple[str, str]] = set()
+
 
 def _apply_agg_adjustment(
     home_lambda: float,
@@ -148,11 +150,13 @@ def resolve_team_name(winamax_name: str, name_map: dict, league_key: str) -> str
     league_dict = name_map.get(league_key, {})
     canonical = league_dict.get(winamax_name)
     if canonical is None:
-        logger.warning(
-            "[WARNING] No mapping found for: '%s' in league '%s'. "
-            "Add an entry to data/team_name_map.json under '%s' and re-run.",
-            winamax_name, league_key, league_key,
-        )
+        key = (league_key, winamax_name)
+        if key not in _warned_unmapped:
+            _warned_unmapped.add(key)
+            logger.warning(
+                "No mapping: '%s' in '%s' — add to data/team_name_map.json",
+                winamax_name, league_key,
+            )
     return canonical
 
 

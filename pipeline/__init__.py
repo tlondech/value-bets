@@ -38,8 +38,16 @@ def run_league_pipeline(
         return [], []
 
     result = fetcher.fetch(league, cfg, engine, name_map, force_fetch, dry_run)
+
+    n_upcoming = len(result.upcoming_events)
+    quota = getattr(result.odds_client, "quota_remaining", None)
+    quota_str = f"  quota: {quota}" if quota is not None else ""
+
     if dry_run or not result.upcoming_events:
+        logger.info("  %-26s  [FETCH]    %2d matches%s", league.display_name, n_upcoming, quota_str)
         return [], []
+
+    logger.info("  %-26s  [FETCH]    %2d matches%s", league.display_name, n_upcoming, quota_str)
 
     signals = evaluator.evaluate(
         result.upcoming_events, league, cfg, name_map,
@@ -51,13 +59,7 @@ def run_league_pipeline(
     )
 
     n_signals = sum(len(m.get("signals", [])) for m in signals)
-    quota = getattr(result.odds_client, "quota_remaining", None)
-    logger.info(
-        "%-14s  %2d upcoming  → %2d signals   API quota: %s",
-        f"[{league.display_name}]",
-        len(result.upcoming_events), n_signals,
-        quota if quota is not None else "—",
-    )
+    logger.info("  %-26s  [EVALUATE] %2d signals", league.display_name, n_signals)
 
     for f in result.raw_fixtures:
         f["league_key"] = league.key
