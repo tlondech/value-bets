@@ -33,7 +33,107 @@ export function onAuthStateChange(cb) {
 
 // ── Auth screen HTML ───────────────────────────────────────────
 
-export function renderAuthScreen() {
+function evClass(ev) {
+  if (ev >= 0.20) return "ev-danger";
+  if (ev >= 0.10) return "ev-warning";
+  return "ev-success";
+}
+
+function buildShowcaseCard(signal) {
+  if (!signal) return null;
+
+  const sport = signal.sport;
+  const kickoffDate = new Date(signal.kickoff);
+  const dateStr = kickoffDate.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const evPct = `+${(signal.ev * 100).toFixed(1)}%`;
+  const probPct = `${(signal.true_prob * 100).toFixed(1)}%`;
+  const oddsStr = Number(signal.odds).toFixed(2);
+  const ev = Number(signal.ev);
+
+  // League badge colors
+  const badgeClass = sport === "basketball"
+    ? "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300"
+    : sport === "tennis"
+      ? "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300"
+      : "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300";
+
+  const leagueLabel = signal.stage
+    ? `${signal.league_name} · ${signal.stage}`
+    : signal.league_name;
+
+  // Score display
+  const scoreHtml = (signal.actual_home_score != null && signal.actual_away_score != null)
+    ? `<span class="text-xs font-mono text-gray-400 dark:text-gray-500 ml-1">${signal.actual_home_score}–${signal.actual_away_score}</span>`
+    : "";
+
+  // Tennis: set scores from score_detail
+  const tennisScore = signal.score_detail
+    ? `<span class="text-xs font-mono text-gray-400 dark:text-gray-500 ml-1">${signal.score_detail}</span>`
+    : scoreHtml;
+
+  const homeCrest = signal.home_crest
+    ? `<img src="${signal.home_crest}" alt="" class="w-7 h-7 object-contain flex-shrink-0">`
+    : `<span class="w-7 h-7 flex-shrink-0"></span>`;
+  const awayCrest = signal.away_crest
+    ? `<img src="${signal.away_crest}" alt="" class="w-7 h-7 object-contain flex-shrink-0">`
+    : `<span class="w-7 h-7 flex-shrink-0"></span>`;
+
+  const homeRank = sport === "tennis" && signal.home_rank
+    ? `<span class="text-xs text-gray-400 dark:text-gray-500 ml-1">#${signal.home_rank}</span>` : "";
+  const awayRank = sport === "tennis" && signal.away_rank
+    ? `<span class="text-xs text-gray-400 dark:text-gray-500 ml-1">#${signal.away_rank}</span>` : "";
+
+  return `
+    <div class="relative pointer-events-none select-none">
+      <span class="absolute top-2 right-2 z-10 text-[10px] font-bold uppercase tracking-wider bg-green-600/80 text-white px-1.5 py-0.5 rounded">Hit ✓</span>
+      <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden opacity-90">
+        <div class="flex items-start justify-between px-4 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex flex-wrap items-center gap-2 mr-3">
+            <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${badgeClass}">${leagueLabel}</span>
+          </div>
+          <span class="text-sm font-semibold tabular-nums text-gray-500 dark:text-gray-400">${dateStr}</span>
+        </div>
+        <div class="px-4 py-3 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 min-w-0">
+              ${homeCrest}
+              <span class="font-semibold truncate">${signal.home_canonical || signal.home_team}</span>${homeRank}
+            </div>
+            ${sport !== "tennis" ? tennisScore : ""}
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 min-w-0">
+              ${awayCrest}
+              <span class="font-semibold truncate">${signal.away_canonical || signal.away_team}</span>${awayRank}
+            </div>
+            ${sport === "tennis" ? tennisScore : ""}
+          </div>
+        </div>
+        <div class="px-4 pb-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+          <table class="w-full text-sm table-fixed">
+            <thead>
+              <tr class="text-xs text-gray-400 uppercase">
+                <th class="w-[32%] pb-1 pr-2 text-left font-medium">Signal</th>
+                <th class="pb-1 pr-2 text-right font-medium">Odds</th>
+                <th class="pb-1 pr-2 text-right font-medium">Prob</th>
+                <th class="pb-1 text-right font-medium">EV</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-t border-gray-100 dark:border-gray-700/50">
+                <td class="py-1.5 pr-2"><span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">${signal.outcome_label}</span></td>
+                <td class="py-1.5 pr-2 text-right font-mono text-sm">${oddsStr}</td>
+                <td class="py-1.5 pr-2 text-right text-sm text-gray-500 dark:text-gray-400">${probPct}</td>
+                <td class="py-1.5 text-right text-sm font-semibold"><span class="${evClass(ev)}">${evPct}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+export function renderAuthScreen(showcaseSignals = null) {
   const sampleCard1 = `
     <div class="relative pointer-events-none select-none">
       <span class="absolute top-2 right-2 z-10 text-[10px] font-bold uppercase tracking-wider bg-indigo-600/80 text-white px-1.5 py-0.5 rounded">Sample</span>
@@ -262,10 +362,17 @@ export function renderAuthScreen() {
 
         <!-- RIGHT PANEL -->
         <div class="flex flex-col gap-4 w-full md:w-96 shrink-0 md:mt-4">
-          <p class="text-xs font-semibold text-gray-500 dark:text-gray-600 uppercase tracking-wider mb-1">Example signals</p>
-          ${sampleCard1}
-          ${sampleCard3}
-          ${sampleCard2}
+          ${(() => {
+            const football   = showcaseSignals?.football   ? buildShowcaseCard(showcaseSignals.football)   : null;
+            const basketball = showcaseSignals?.basketball ? buildShowcaseCard(showcaseSignals.basketball) : null;
+            const tennis     = showcaseSignals?.tennis     ? buildShowcaseCard(showcaseSignals.tennis)     : null;
+            const hasReal    = football || basketball || tennis;
+            const label      = hasReal ? "Recent hits" : "Example signals";
+            return `<p class="text-xs font-semibold text-gray-500 dark:text-gray-600 uppercase tracking-wider mb-1">${label}</p>
+          ${football   ?? sampleCard1}
+          ${basketball ?? sampleCard3}
+          ${tennis     ?? sampleCard2}`;
+          })()}
         </div>
 
       </div>

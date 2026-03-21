@@ -107,3 +107,14 @@ export async function fetchHistoryPage(page = 0) {
   if (error) throw error;
   return { data, count };
 }
+
+// ── Fetch showcase signals for the auth screen (anon-accessible) ─
+export async function fetchShowcaseSignals() {
+  try {
+    const { data, error } = await sb.rpc("get_showcase_signals");
+    if (error) return null;
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}

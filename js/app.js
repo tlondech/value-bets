@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { fetchSignals, fetchHistoryPage, fetchPendingSignals } from "./api.js";
+import { fetchSignals, fetchHistoryPage, fetchPendingSignals, fetchShowcaseSignals } from "./api.js";
 import { refreshAnalytics, setupAnalytics } from "./analytics.js";
 import {
   relativeDate,
@@ -175,7 +175,8 @@ async function init() {
   // ── 1. Auth guard ─────────────────────────────────────────────
   const session = await getSession();
   if (!session) {
-    document.body.innerHTML = renderAuthScreen();
+    const showcaseSignals = await fetchShowcaseSignals();
+    document.body.innerHTML = renderAuthScreen(showcaseSignals);
     attachAuthListeners();
     onAuthStateChange((_event, s) => { if (s) init(); });
     return;
