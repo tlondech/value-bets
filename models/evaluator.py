@@ -68,6 +68,12 @@ def calculate_ev(true_probability: float, decimal_odds: float) -> float:
     return (true_probability * decimal_odds) - 1.0
 
 
+def _encode_line(point: float) -> str:
+    """Encodes a spread line float to a safe string key, e.g. -5.5 → 'm5_5', +3.5 → 'p3_5'."""
+    prefix = "m" if point < 0 else "p"
+    return prefix + str(abs(point)).replace(".", "_")
+
+
 def _fmt_line(line: float) -> str:
     """Normalise a totals line to its canonical half-integer outcome key.
 
@@ -90,6 +96,9 @@ def evaluate_match(
     under_odds: float | None = None,
     totals_line: float | None = None,
     rho: float = 0.0,
+    spread_home_point: float | None = None,
+    spread_home_odds: float | None = None,
+    spread_away_odds: float | None = None,
 ) -> dict:
     """
     End-to-end evaluation for one match.
@@ -119,6 +128,24 @@ def evaluate_match(
     over_ev  = calculate_ev(ou["over"],  over_odds)  if over_odds  is not None else None
     under_ev = calculate_ev(ou["under"], under_odds) if under_odds is not None else None
 
+    # Spread calculation using the Poisson goal matrix
+    spread_home_key = spread_away_key = None
+    spread_home_ev = spread_away_ev = None
+    p_home_covers = p_away_covers = None
+
+    if spread_home_point is not None and spread_home_odds and spread_away_odds:
+        threshold = -spread_home_point  # e.g. 1.5 when spread_home_point = -1.5
+        mask = np.array([
+            [i - j > threshold for j in range(score_matrix.shape[1])]
+            for i in range(score_matrix.shape[0])
+        ])
+        p_home_covers = float(score_matrix[mask].sum())
+        p_away_covers = 1.0 - p_home_covers
+        spread_home_key = f"spread_home_{_encode_line(spread_home_point)}"
+        spread_away_key = f"spread_away_{_encode_line(-spread_home_point)}"
+        spread_home_ev = calculate_ev(p_home_covers, spread_home_odds)
+        spread_away_ev = calculate_ev(p_away_covers, spread_away_odds)
+
     signals = []
     if home_ev >= ev_threshold:
         signals.append("home_win")
@@ -130,8 +157,12 @@ def evaluate_match(
         signals.append(over_key)
     if under_ev is not None and under_ev >= ev_threshold:
         signals.append(under_key)
+    if spread_home_ev is not None and spread_home_ev >= ev_threshold:
+        signals.append(spread_home_key)
+    if spread_away_ev is not None and spread_away_ev >= ev_threshold:
+        signals.append(spread_away_key)
 
-    return {
+    result = {
         "home_win_prob": home_prob,
         "draw_prob":     probs["draw"],
         "away_win_prob": away_prob,
@@ -143,6 +174,14 @@ def evaluate_match(
         over_key + "_ev":  over_ev,
         under_key + "_ev": under_ev,
         "signals": signals,
-        "over_key":   over_key,
-        "under_key":  under_key,
+        "over_key":        over_key,
+        "under_key":       under_key,
+        "spread_home_key": spread_home_key,
+        "spread_away_key": spread_away_key,
     }
+    if spread_home_key is not None:
+        result[spread_home_key + "_prob"] = p_home_covers
+        result[spread_away_key + "_prob"] = p_away_covers
+        result[spread_home_key + "_ev"]   = spread_home_ev
+        result[spread_away_key + "_ev"]   = spread_away_ev
+    return result

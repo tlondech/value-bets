@@ -232,6 +232,9 @@ def evaluate_matches(
             under_odds=event.get("under_odds"),
             totals_line=event.get("totals_line"),
             rho=dc_params["rho"] if dc_params is not None else 0.0,
+            spread_home_point=event.get("spread_home_point"),
+            spread_home_odds=event.get("spread_home_odds"),
+            spread_away_odds=event.get("spread_away_odds"),
         )
 
         if not result["signals"]:
@@ -246,6 +249,11 @@ def evaluate_matches(
             over_key:   (result[over_key + "_prob"],  event.get("over_odds"),  result[over_key + "_ev"]),
             under_key:  (result[under_key + "_prob"], event.get("under_odds"), result[under_key + "_ev"]),
         }
+        spread_home_key = result.get("spread_home_key")
+        spread_away_key = result.get("spread_away_key")
+        if spread_home_key:
+            outcome_map[spread_home_key] = (result[spread_home_key + "_prob"], event.get("spread_home_odds"), result[spread_home_key + "_ev"])
+            outcome_map[spread_away_key] = (result[spread_away_key + "_prob"], event.get("spread_away_odds"), result[spread_away_key + "_ev"])
         kickoff_iso = event["commence_time"].isoformat()
         key = (home_winamax, away_winamax, kickoff_iso)
         if key not in match_signals:
@@ -280,8 +288,10 @@ def evaluate_matches(
 
         _market_groups = [
             {"home_win", "draw", "away_win"},
-            {"over_2_5", "under_2_5"},
+            {result["over_key"], result["under_key"]},
         ]
+        if spread_home_key:
+            _market_groups.append({spread_home_key, spread_away_key})
         ratio_cap = UCL_PROB_RATIO_CAP if league.key == "ucl" else cfg.max_prob_ratio
         filtered_signals = []
         for group in _market_groups:

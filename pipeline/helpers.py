@@ -33,6 +33,13 @@ def get_outcome_label(
         parts = line_str.split("_")
         line = f"{parts[0]}.{''.join(parts[1:])}" if len(parts) > 1 else parts[0]
         return f"{'Over' if prefix == 'over' else 'Under'} {line}"
+    if outcome.startswith("spread_home_") or outcome.startswith("spread_away_"):
+        side = "home" if outcome.startswith("spread_home_") else "away"
+        encoded = outcome[len("spread_home_"):] if side == "home" else outcome[len("spread_away_"):]
+        sign = -1 if encoded.startswith("m") else 1
+        line = sign * float(encoded[1:].replace("_", "."))
+        team = home_name if side == "home" else away_name
+        return f"{team} {line:+.1f}" if team else f"{'Home' if side == 'home' else 'Away'} {line:+.1f}"
     return outcome
 
 

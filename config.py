@@ -46,7 +46,7 @@ class LeagueConfig:
 LEAGUES: list[LeagueConfig] = [
     LeagueConfig("ligue1",          "Ligue 1",                   "soccer_france_ligue_one"),
     LeagueConfig("ligue2",          "Ligue 2",                   "soccer_france_ligue_two"),
-    LeagueConfig("coupedefrance",    "Coupe de France",           "soccer_france_coupe_de_france"),
+    LeagueConfig("coupedefrance",    "Coupe de France",          "soccer_france_coupe_de_france"),
     LeagueConfig("epl",             "Premier League",            "soccer_epl"),
     LeagueConfig("facup",           "FA Cup",                    "soccer_fa_cup"),
     LeagueConfig("eflcup",          "EFL Cup",                   "soccer_england_efl_cup"),

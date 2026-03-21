@@ -1,5 +1,6 @@
 .env
 .env.local
+pyrightconfig.json
 *.db
 data/*.db
 logs/

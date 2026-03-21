@@ -33,8 +33,8 @@ def fetch_league_data(
     stage_map: dict[str, str] = {}
     crest_map: dict[str, str] = {}
 
-    # Fetch odds from API (basketball also needs spreads)
-    extra_markets = ["spreads"] if league.sport_type == "basketball" else []
+    # Fetch odds from API (basketball and football also need spreads)
+    extra_markets = ["spreads"] if league.sport_type in ("basketball", "football") else []
     odds_client = OddsAPIClient(
         api_key=cfg.odds_api_key,
         sport=league.odds_sport,

@@ -233,9 +233,9 @@ def settle_supabase_signals(supabase: Client, all_fixtures, name_map: dict | Non
             continue
 
         outcome = row["outcome"]
-        won = {"home_win": hg > ag, "draw": hg == ag, "away_win": ag > hg}.get(outcome)
+        won = _settle_outcome(outcome, hg, ag, "football")
         if won is None:
-            won = _settle_totals(outcome, hg, ag) or False
+            continue
 
         rows_to_update.append({
             "kickoff":           row["kickoff"],
@@ -549,20 +549,8 @@ def settle_nba_supabase_signals(
         away_pts = matched.away_score
         outcome  = row["outcome"]
 
-        # Moneyline
-        if outcome == "home_win":
-            won = home_pts > away_pts
-        elif outcome == "away_win":
-            won = away_pts > home_pts
-        # Totals (e.g. "over_220_5" or "under_220_5")
-        elif outcome.startswith(("over_", "under_")):
-            won = _settle_totals(outcome, home_pts, away_pts)
-            won = won if won is not None else False
-        # Spreads (e.g. "spread_home_m5_5" or "spread_away_p5_5")
-        elif outcome.startswith("spread_home_") or outcome.startswith("spread_away_"):
-            won = _settle_nba_spread(outcome, home_pts, away_pts)
-        else:
-            logger.debug("[NBA] Unknown outcome key '%s' — skipping.", outcome)
+        won = _settle_outcome(outcome, home_pts, away_pts, "NBA")
+        if won is None:
             continue
 
         rows_to_update.append({
@@ -584,7 +572,24 @@ def settle_nba_supabase_signals(
     return _write_settled_signals(supabase, rows_to_update, "NBA")
 
 
-def _settle_nba_spread(outcome: str, home_pts: int, away_pts: int) -> bool:
+def _settle_outcome(outcome: str, home_score: int, away_score: int, sport: str) -> bool | None:
+    """Evaluates a single outcome against a final score.
+
+    Returns True (win), False (loss), or None if the outcome key is unrecognised
+    (caller should skip the row).
+    """
+    if outcome in ("home_win", "draw", "away_win"):
+        return {"home_win": home_score > away_score, "draw": home_score == away_score, "away_win": away_score > home_score}[outcome]
+    if outcome.startswith(("over_", "under_")):
+        won = _settle_totals(outcome, home_score, away_score)
+        return won if won is not None else False
+    if outcome.startswith(("spread_home_", "spread_away_")):
+        return _settle_spread(outcome, home_score, away_score)
+    logger.debug("[%s] Unknown outcome key '%s' — skipping.", sport, outcome)
+    return None
+
+
+def _settle_spread(outcome: str, home_score: int, away_score: int) -> bool:
     """
     Determines if a spread/handicap signal won.
 
@@ -594,7 +599,7 @@ def _settle_nba_spread(outcome: str, home_pts: int, away_pts: int) -> bool:
         "spread_away_p5_5"  → away covers +5.5  → away wins or loses by < 5.5
         "spread_away_m3_5"  → away covers -3.5  → away wins by > 3.5
     """
-    diff = home_pts - away_pts  # positive = home wins
+    diff = home_score - away_score  # positive = home wins
 
     if outcome.startswith("spread_home_"):
         line_str = outcome[len("spread_home_"):]

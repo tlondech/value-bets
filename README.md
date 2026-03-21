@@ -13,7 +13,7 @@ For each upcoming match across supported leagues:
 3. **Builds team ratings** using a Dixon-Coles MLE model (with rolling-window fallback), blended with head-to-head stats
 4. **Computes expected goals** (λ) per team, adjusted for fatigue, rest days, and UCL second-leg aggregate dynamics
 5. **Builds a score probability matrix** via Poisson distribution with Dixon-Coles low-score correction
-6. **Calculates Expected Value** (EV = true_prob × decimal_odds − 1) for each outcome; caps the model/implied probability ratio to filter out hallucinated high-EV signals; surfaces only the highest-EV signal per market group (1X2, O/U)
+6. **Calculates Expected Value** (EV = true_prob × decimal_odds − 1) for each outcome; caps the model/implied probability ratio to filter out hallucinated high-EV signals; surfaces only the highest-EV signal per market group (1X2, O/U, Spread)
 7. **Fetches injury context** — for signals with EV ≥ 20% within 24h of kickoff, pulls structured injury/suspension data from ESPN's free public API (no key required)
 
 ### Tennis pipeline
@@ -48,7 +48,7 @@ Elo ratings are computed once per run and shared across all tournaments for the 
 Team ratings are computed once per run. Games currently in progress (within a 3.5-hour live window to account for overtime) are skipped.
 
 ### Supported Markets
-- **Football:** 1X2 (Home Win / Draw / Away Win), Over/Under goals (line auto-selected per event)
+- **Football:** 1X2 (Home Win / Draw / Away Win), Over/Under goals (line auto-selected per event), Spread/Handicap
 - **Tennis:** Match winner (Player 1 Win / Player 2 Win)
 - **Basketball:** Moneyline (Home Win / Away Win), Over/Under points, Spread/Handicap
 
@@ -248,9 +248,11 @@ When fewer than 10 fixtures are available, the model falls back to rolling-windo
 - **Fatigue:** Teams with <4 days since their last match concede 8% more goals
 - **UCL second legs:** Trailing teams receive an attack boost proportional to their goal deficit; leading teams receive a slight defensive orientation
 
+**Spread/Handicap:** When spread odds are available, the score probability matrix is used directly to compute the probability that the home team covers the line (goal differential > threshold). The away cover probability is the complement.
+
 **Signal filtering:**
 - **Probability ratio cap:** Signals are dropped when `model_prob / implied_prob > 1.3` (1.4 for UCL)
-- **Market-group deduplication:** Only the single highest-EV signal per market group (1X2, O/U) is surfaced
+- **Market-group deduplication:** Only the single highest-EV signal per market group (1X2, O/U, Spread) is surfaced
 
 ### Tennis — Surface-Adjusted Elo
 
