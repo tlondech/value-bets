@@ -256,7 +256,9 @@ async function init() {
 
     // Lock (not hide) history & analytics — desktop tabs + mobile bottom nav
     document.querySelectorAll("[data-main='history'], [data-main='analytics']").forEach(el => {
-      el.classList.add("opacity-40", "cursor-not-allowed");
+      el.classList.add("opacity-40", "cursor-not-allowed", "relative");
+      el.insertAdjacentHTML("beforeend",
+        `<span class="absolute -top-1 -right-1 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-400 dark:bg-gray-600 pointer-events-none">${LOCK_SVG}</span>`);
       el.addEventListener("click", shakeAndCheckout, true);
     });
 
@@ -303,6 +305,11 @@ async function init() {
       shake(btn);
       startCheckout();
     }, true);
+
+    // Hide filter chips bar and last-updated on mobile
+    document.getElementById("active-filter-chips")?.classList.add("hidden");
+    document.getElementById("active-filter-chips-mobile")?.classList.add("hidden");
+    document.getElementById("last-updated-mobile-wrap")?.classList.add("hidden");
   }
 
   // ── Path C (trialing): show trial countdown banner ─────────────
