@@ -366,14 +366,13 @@ export function renderCard(m, opts = {}) {
       : null)
     : null;
 
-  const isTeaser = state.teaserMode;
   const locked = `<span class="text-gray-300 dark:text-gray-600 select-none">&bull;&bull;&bull;&bull;</span>`;
   const signalsRows = m.signals.map(b => `
     <tr class="border-t border-gray-100 dark:border-gray-700/50">
-      ${isTeaser ? "" : `<td class="py-1.5 pr-2">
-        <div class="max-w-full"><span class="signal-label-tip inline-block max-w-full truncate px-2 py-0.5 rounded-full text-xs font-medium align-middle bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300" data-tip="${esc(b.outcome_label)}">${signalLabel(b)}</span></div>
+      <td class="py-1.5 pr-2">
+        <div class="max-w-full"><span class="signal-label-tip inline-block max-w-full truncate px-2 py-0.5 rounded-full text-xs font-medium align-middle bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300" data-tip="${b.outcome_label ? esc(b.outcome_label) : ""}">${b.outcome_label ? signalLabel(b) : locked}</span></div>
       </td>
-      <td class="py-1.5 pr-2 text-right font-mono text-sm">${b.odds != null ? Number(b.odds).toFixed(2) : locked}</td>`}
+      <td class="py-1.5 pr-2 text-right font-mono text-sm">${b.odds != null ? Number(b.odds).toFixed(2) : locked}</td>
       <td class="py-1.5 pr-2 text-right text-sm text-gray-500 dark:text-gray-400">${b.true_prob != null ? (b.true_prob * 100).toFixed(1) + "%" : locked}</td>
       <td class="py-1.5 text-right text-sm font-semibold">${b.ev != null ? evLabel(b.ev) : locked}</td>
     </tr>`).join("");
@@ -436,10 +435,10 @@ export function renderCard(m, opts = {}) {
       <table class="w-full text-sm table-fixed">
         <thead>
           <tr class="text-xs text-gray-400 uppercase">
-            ${isTeaser ? "" : `<th class="w-[34%] pb-1 pr-2 text-left font-medium">Signal<span class="hidden md:inline-flex">${infoIcon("The outcome with the highest model edge", "left")}</span></th>
-            <th class="w-[20%] pb-1 pr-2 text-right font-medium">Odds<span class="hidden md:inline-flex">${infoIcon("Decimal odds offered by the bookmaker", "right")}</span></th>`}
-            <th class="${isTeaser ? "w-1/2" : "w-[21%]"} pb-1 pr-2 text-right font-medium">Prob<span class="hidden md:inline-flex">${infoIcon("Model's estimated probability of this outcome", "right")}</span></th>
-            <th class="${isTeaser ? "w-1/2" : "w-[25%]"} pb-1 text-right font-medium">EV<span class="hidden md:inline-flex">${infoIcon("Expected value — gain per €1 staked if the model is right. Green = good value, yellow/red = high edge, verify odds first", "right")}</span></th>
+            <th class="w-[34%] pb-1 pr-2 text-left font-medium">Signal<span class="hidden md:inline-flex">${infoIcon("The outcome with the highest model edge", "left")}</span></th>
+            <th class="w-[20%] pb-1 pr-2 text-right font-medium">Odds<span class="hidden md:inline-flex">${infoIcon("Decimal odds offered by the bookmaker", "right")}</span></th>
+            <th class="w-[21%] pb-1 pr-2 text-right font-medium">Prob<span class="hidden md:inline-flex">${infoIcon("Model's estimated probability of this outcome", "right")}</span></th>
+            <th class="w-[25%] pb-1 text-right font-medium">EV<span class="hidden md:inline-flex">${infoIcon("Expected value — gain per €1 staked if the model is right. Green = good value, yellow/red = high edge, verify odds first", "right")}</span></th>
           </tr>
         </thead>
         <tbody>${signalsRows}</tbody>

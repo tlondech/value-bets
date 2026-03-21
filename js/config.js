@@ -5,8 +5,13 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 export const TRIAL_DAYS = 14;
 
-export const SUPABASE_URL = "https://uteiydpfxybtjzmdvsgc.supabase.co";
-const SUPABASE_KEY = "sb_publishable_v2PxaiIgMqJs404xFYlYsg_S_3aHvTo";
+const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+export const SUPABASE_URL = isLocal
+  ? "http://127.0.0.1:54321"
+  : "https://uteiydpfxybtjzmdvsgc.supabase.co";
+const SUPABASE_KEY = isLocal
+  ? "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH"
+  : "sb_publishable_v2PxaiIgMqJs404xFYlYsg_S_3aHvTo";
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true },
