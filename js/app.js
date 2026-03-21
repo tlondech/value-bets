@@ -254,16 +254,22 @@ async function init() {
       startCheckout();
     };
 
+    const LOCK_BADGE = `<span class="absolute -top-1 -right-1 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-indigo-500 text-white pointer-events-none">${LOCK_SVG}</span>`;
+
     // Lock (not hide) history & analytics — desktop tabs + mobile bottom nav
     document.querySelectorAll("[data-main='history'], [data-main='analytics']").forEach(el => {
       el.classList.add("opacity-40", "cursor-not-allowed", "relative");
-      el.insertAdjacentHTML("beforeend",
-        `<span class="absolute -top-1 -right-1 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-gray-400 dark:bg-gray-600 pointer-events-none">${LOCK_SVG}</span>`);
+      el.insertAdjacentHTML("beforeend", LOCK_BADGE);
       el.addEventListener("click", shakeAndCheckout, true);
     });
 
-    // Burger button
-    document.getElementById("burger-btn")?.addEventListener("click", shakeAndCheckout, true);
+    // Burger button — mobile filter entry point
+    const burgerBtn = document.getElementById("burger-btn");
+    if (burgerBtn) {
+      burgerBtn.classList.add("relative");
+      burgerBtn.insertAdjacentHTML("beforeend", LOCK_BADGE);
+      burgerBtn.addEventListener("click", shakeAndCheckout, true);
+    }
 
     // Filters button — mute visual, replace badge with padlock
     const filtersBtn = document.getElementById("filters-toggle");
@@ -274,8 +280,8 @@ async function init() {
       const badge = document.getElementById("filter-badge");
       if (badge) {
         badge.innerHTML = LOCK_SVG;
-        badge.classList.remove("hidden", "bg-blue-600", "text-white", "font-bold");
-        badge.classList.add("flex", "items-center", "justify-center", "text-gray-400", "bg-gray-100", "dark:bg-gray-800");
+        badge.classList.remove("hidden", "bg-blue-600", "font-bold");
+        badge.classList.add("flex", "items-center", "justify-center", "bg-indigo-500", "text-white");
       }
       filtersBtn.addEventListener("click", shakeAndCheckout, true);
     }
