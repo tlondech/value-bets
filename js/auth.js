@@ -178,7 +178,7 @@ function buildShowcaseCard(signal) {
             </thead>
             <tbody>
               <tr class="border-t border-gray-100 dark:border-gray-700/50">
-                <td class="py-1.5 pr-2"><span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">${signalLabel}</span></td>
+                <td class="py-1.5 pr-2"><div class="max-w-full"><span class="inline-block max-w-full truncate px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">${signalLabel}</span></div></td>
                 <td class="py-1.5 pr-2 text-right font-mono text-sm">${Number(signal.odds).toFixed(2)}</td>
                 <td class="py-1.5 pr-2 text-right text-sm text-gray-500 dark:text-gray-400">${(signal.true_prob * 100).toFixed(1)}%</td>
                 <td class="py-1.5 text-right text-sm font-semibold"><span class="${evClass(ev)}">+${(ev * 100).toFixed(1)}%</span></td>
