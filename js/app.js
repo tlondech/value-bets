@@ -43,7 +43,11 @@ export async function refreshData() {
     state.historyLoaded   = [];
     state.historyFetching = false;
 
-    const [signalsResult, histResult, pendingResult] = await Promise.all([fetchSignals(), fetchHistoryPage(0), fetchPendingSignals()]);
+    const [signalsResult, histResult, pendingResult] = await Promise.all([
+      fetchSignals(),
+      state.teaserMode ? Promise.resolve({ data: [], count: 0 }) : fetchHistoryPage(0),
+      state.teaserMode ? Promise.resolve([])                     : fetchPendingSignals(),
+    ]);
     state.signalsData   = signalsResult;
     state.historyTotal  = histResult.count;
     state.historyLoaded = histResult.data;
