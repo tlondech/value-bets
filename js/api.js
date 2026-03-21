@@ -3,6 +3,11 @@ import { state } from "./state.js";
 
 // ── Fetch upcoming (unsettled) signals ──────────────────────────
 export async function fetchSignals() {
+  if (state.teaserMode) {
+    const { data, error } = await sb.rpc("get_teaser_signals");
+    if (error) throw error;
+    return data ?? [];
+  }
   const { data, error } = await sb
     .from("signal_history")
     .select("*")

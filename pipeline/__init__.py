@@ -22,9 +22,7 @@ __all__ = [
 def run_league_pipeline(
     league: LeagueConfig,
     cfg,
-    engine,
     name_map: dict,
-    force_fetch: bool = False,
     dry_run: bool = False,
 ) -> tuple[list[dict], list[dict], int, list]:
     """
@@ -38,7 +36,7 @@ def run_league_pipeline(
         logger.warning("[%s] Unknown sport_type %r — skipping.", league.key, league.sport_type)
         return [], [], 0, []
 
-    result = fetcher.fetch(league, cfg, engine, name_map, force_fetch, dry_run)
+    result = fetcher.fetch(league, cfg, name_map, dry_run)
 
     n_upcoming = len(result.upcoming_events)
     quota = getattr(result.odds_client, "quota_remaining", None)

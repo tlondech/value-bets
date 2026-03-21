@@ -3,14 +3,11 @@ Signal Arena — Main Orchestrator
 Run: python main.py
 
 Pipeline (per enabled league):
-  1. Load config + init DB
-  2. Fetch upcoming Winamax odds (The Odds API)
-  3. Upsert matches + odds into SQLite
-  4. Fetch finished fixtures + xG (football-data.co.uk CSV)
-  5. Upsert fixtures into SQLite
-  6. Build Poisson features per match
-  7. Calculate Expected Value → collect signals
-  8. Merge all leagues, push signals to Supabase signal_history table
+  1. Fetch upcoming Winamax odds (The Odds API)
+  2. Fetch finished fixtures from ESPN (football only)
+  3. Build Poisson features per match
+  4. Calculate Expected Value → collect signals
+  5. Merge all leagues, push signals to Supabase signal_history table
 """
 
 import argparse
@@ -27,13 +24,8 @@ from rich.logging import RichHandler
 from rich.table import Table
 from rich.tree import Tree
 
-from sqlalchemy.orm import Session
-
-from config import LEAGUES as _ALL_LEAGUES
 from config import _current_nba_season, load_config
 from constants import LOCAL_REPORT_URL
-from db.queries import prune_stale_signals, save_signals_to_history
-from db.schema import init_db
 from db.supabase import (
     get_supabase_client,
     prune_stale_supabase_signals,
@@ -156,31 +148,13 @@ def _init_nba(cfg) -> None:
         logger.warning("NBA ratings computation failed — NBA will be skipped: %s", e)
 
 
-
-
-# ---------------------------------------------------------------------------
-# Settlement
-# ---------------------------------------------------------------------------
-
-
-
 # ---------------------------------------------------------------------------
 # Persistence
 # ---------------------------------------------------------------------------
 
-def _persist(supabase, engine, all_signals: list[dict], processed_league_keys: set[str]) -> None:
-    """Saves signals to local SQLite and Supabase, pruning stale entries."""
+def _persist(supabase, all_signals: list[dict], processed_league_keys: set[str]) -> None:
+    """Pushes signals to Supabase, pruning stale entries."""
     today = date.today().isoformat()
-
-    with Session(engine) as session:
-        n_pruned = prune_stale_signals(session, all_signals, processed_league_keys)
-        n_new = save_signals_to_history(session, all_signals, today)
-        session.commit()
-    if n_pruned:
-        logger.info("Pruned %d stale signal(s) from local DB.", n_pruned)
-    if n_new:
-        logger.info("Saved %d new signal(s) to local DB.", n_new)
-
     prune_stale_supabase_signals(supabase, all_signals, processed_league_keys)
     push_signals_to_supabase(supabase, all_signals, today)
 
@@ -192,7 +166,6 @@ def _persist(supabase, engine, all_signals: list[dict], processed_league_keys: s
 def run_pipeline(force_fetch: bool = False, dry_run: bool = False) -> None:
     t0 = time.monotonic()
     cfg = load_config()
-    engine = init_db(cfg.db_path)
     name_map = load_team_name_map(cfg.team_map_path)
 
     # ── INIT ──────────────────────────────────────────────────────────────────
@@ -222,7 +195,7 @@ def run_pipeline(force_fetch: bool = False, dry_run: bool = False) -> None:
 
         for league in leagues:
             league_signals, raw_fixtures, n_matches, dry_events = run_league_pipeline(
-                league, cfg, engine, name_map, force_fetch=force_fetch, dry_run=dry_run,
+                league, cfg, name_map, dry_run=dry_run,
             )
             all_signals.extend(league_signals)
             all_raw_fixtures.extend(raw_fixtures)
@@ -270,7 +243,7 @@ def run_pipeline(force_fetch: bool = False, dry_run: bool = False) -> None:
     logger.info("")
     logger.info("── PERSIST ──")
     all_signals.sort(key=lambda x: x["kickoff"])
-    _persist(supabase, engine, all_signals, {lg.key for lg in cfg.enabled_leagues})
+    _persist(supabase, all_signals, {lg.key for lg in cfg.enabled_leagues})
 
     # ── DONE ──────────────────────────────────────────────────────────────────
     total_signals = sum(len(m["signals"]) for m in all_signals)

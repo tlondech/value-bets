@@ -40,15 +40,18 @@ class BasketballDataClient:
         Fetches the previous completed season and the current season so that
         teams with limited current-season data still have a full ratings history.
         """
-        prev_season = _previous_season(season)
-        logger.debug("NBA fetch_team_game_logs: season=%s (also fetching %s)", season, prev_season)
+        seasons = [season]
+        s = season
+        for _ in range(4):
+            s = _previous_season(s)
+            seasons.append(s)
+        seasons.reverse()  # oldest first
+        logger.debug("NBA fetch_team_game_logs: fetching %d seasons: %s", len(seasons), seasons)
 
-        prev_df = _fetch_from_espn(prev_season)
-        curr_df = _fetch_from_espn(season)
+        dfs = [_fetch_from_espn(s) for s in seasons]
 
-        if not curr_df.empty or not prev_df.empty:
-            parts = [df for df in (prev_df, curr_df) if not df.empty]
-            result = pd.concat(parts, ignore_index=True)
+        if any(not df.empty for df in dfs):
+            result = pd.concat([df for df in dfs if not df.empty], ignore_index=True)
             _save_cache(result, season)
             return result
 

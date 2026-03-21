@@ -28,6 +28,11 @@ import {
   startCheckout,
   renderAccountMenu,
   attachAccountMenuListeners,
+  renderNewUserWelcome,
+  attachNewUserWelcomeListeners,
+  renderExpiredPaywall,
+  attachExpiredPaywallListeners,
+  renderTrialBanner,
 } from "./billing.js";
 
 // ── Refresh all data ───────────────────────────────────────────
@@ -64,7 +69,11 @@ export async function refreshData() {
       const hasToday = state.signalsData.some(r =>
         new Date(r.kickoff).toLocaleDateString("en-CA", { timeZone: tz }) === todayD
       );
-      if (!hasToday) state.activeDateSignals = "week";
+      if (!hasToday) {
+        state.activeDateSignals = "week";
+        updateFilterUI();
+        renderBurgerDrawerPills();
+      }
     }
 
     // Render whichever panel is currently visible
@@ -156,6 +165,9 @@ async function init() {
   const params       = new URLSearchParams(window.location.search);
   const fromCheckout = params.get("checkout") === "success";
 
+  // Restore teaser mode across page reloads
+  if (sessionStorage.getItem("teaser_mode") === "1") state.teaserMode = true;
+
   // ── 1. Auth guard ─────────────────────────────────────────────
   const session = await getSession();
   if (!session) {
@@ -165,7 +177,7 @@ async function init() {
     return;
   }
 
-  // ── 2. Subscription guard ─────────────────────────────────────
+  // ── 2. Subscription routing ───────────────────────────────────
   let sub = await fetchSubscription(session.user.id);
 
   // Stripe webhook may not have fired yet — poll briefly before giving up
@@ -174,13 +186,31 @@ async function init() {
     sub = await pollSubscription(session.user.id, 8, 1500);
   }
 
-  if (!sub || !["active", "trialing"].includes(sub.status)) {
-    await startCheckout();
+  const isActive  = sub && ["active", "trialing"].includes(sub.status);
+  const isNewUser = !sub;
+  const isExpired = sub && sub.trial_used === true && !isActive;
+
+  // Path A — new user: show welcome screen before checkout
+  if (isNewUser) {
+    document.body.innerHTML = renderNewUserWelcome(session);
+    attachNewUserWelcomeListeners();
+    return;
+  }
+
+  // Path B — expired trial: show paywall, or fall through in teaser mode
+  if (isExpired && !state.teaserMode) {
+    document.body.innerHTML = renderExpiredPaywall(session);
+    attachExpiredPaywallListeners(() => {
+      sessionStorage.setItem("teaser_mode", "1");
+      location.reload();
+    });
     return;
   }
 
   if (fromCheckout) {
     history.replaceState(null, "", window.location.pathname);
+    sessionStorage.removeItem("teaser_mode");
+    state.teaserMode = false;
   }
 
   // ── 3. Mount account menu on the account icon(s) ──────────────
@@ -199,6 +229,23 @@ async function init() {
   });
 
   setMainTab("signals");
+
+  // ── Path B (teaser mode): show banner, hide history/analytics ─
+  if (state.teaserMode) {
+    document.getElementById("teaser-banner")?.classList.remove("hidden");
+    document.getElementById("teaser-subscribe-btn")?.addEventListener("click", startCheckout);
+    document.querySelectorAll("[data-main='history'], [data-main='analytics']").forEach(el => el.classList.add("hidden"));
+  }
+
+  // ── Path C (trialing): show trial countdown banner ─────────────
+  if (!state.teaserMode && sub?.status === "trialing" && sub?.current_period_end &&
+      !sessionStorage.getItem("trial_banner_dismissed")) {
+    document.querySelector("body > :first-child")?.insertAdjacentHTML("beforebegin", renderTrialBanner(sub));
+    document.getElementById("trial-banner-dismiss")?.addEventListener("click", () => {
+      sessionStorage.setItem("trial_banner_dismissed", "1");
+      document.getElementById("trial-banner")?.remove();
+    });
+  }
 
   if (fromCheckout) {
     const banner = document.getElementById("welcome-banner");

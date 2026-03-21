@@ -50,9 +50,7 @@ class LeagueFetcher(Protocol):
         self,
         league: LeagueConfig,
         cfg,
-        engine,
         name_map: dict,
-        force_fetch: bool,
         dry_run: bool,
     ) -> FetchResult: ...
 
@@ -68,9 +66,7 @@ class FootballFetcher:
         self,
         league: LeagueConfig,
         cfg,
-        engine,
         name_map: dict,
-        force_fetch: bool,
         dry_run: bool,
     ) -> FetchResult:
         season = league.season_override if league.season_override is not None else _current_season()
@@ -79,8 +75,7 @@ class FootballFetcher:
             league.display_name, league.key, season,
         )
         upcoming_events, raw_fixtures, stage_map, crest_map, odds_client = fetch_league_data(
-            league, cfg, engine, name_map,
-            force_fetch=force_fetch, season=season, dry_run=dry_run,
+            league, cfg, name_map, season=season, dry_run=dry_run,
         )
 
         if dry_run or not upcoming_events:
@@ -96,7 +91,7 @@ class FootballFetcher:
         if leg2_map:
             logger.info("[%s] Detected %d Leg 2 fixture(s).", league.display_name, len(leg2_map))
 
-        features = build_features(raw_fixtures, engine, name_map, league, cfg, season)
+        features = build_features(raw_fixtures, name_map, league, cfg)
         features["leg2_map"] = leg2_map
 
         return FetchResult(
@@ -120,16 +115,12 @@ class TennisFetcher:
         self,
         league: LeagueConfig,
         cfg,
-        engine,
         name_map: dict,
-        force_fetch: bool,
         dry_run: bool,
     ) -> FetchResult:
         season = league.season_override if league.season_override is not None else _current_season()
-        effective_force_fetch = True if dry_run else force_fetch
         upcoming_events, _, _, _, odds_client = fetch_league_data(
-            league, cfg, engine, name_map,
-            force_fetch=effective_force_fetch, season=season, dry_run=dry_run,
+            league, cfg, name_map, season=season, dry_run=dry_run,
         )
 
         if dry_run:
@@ -154,14 +145,11 @@ class NBAFetcher:
         self,
         league: LeagueConfig,
         cfg,
-        engine,
         name_map: dict,
-        force_fetch: bool,
         dry_run: bool,
     ) -> FetchResult:
         upcoming_events, _, _, _, odds_client = fetch_league_data(
-            league, cfg, engine, name_map,
-            force_fetch=True, season=0, dry_run=dry_run,
+            league, cfg, name_map, season=0, dry_run=dry_run,
         )
 
         if dry_run:

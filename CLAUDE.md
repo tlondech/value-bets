@@ -48,6 +48,30 @@ Plain ES modules, no bundler. Files in `js/`: `app.js`, `ui.js`, `api.js`, `stat
 Required: `THE_ODDS_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`
 Optional: `ENABLED_LEAGUES`, `EV_THRESHOLD`, `ROLLING_WINDOW`, and other model params
 
+## Database migrations
+
+Migrations live in `supabase/migrations/` and are managed via the Supabase CLI.
+
+- The project is already linked (`project-ref: uteiydpfxybtjzmdvsgc`, Signal Arena, West Europe London).
+- Filename format: `YYYYMMDDHHmmss_description.sql` (required by the CLI).
+
+**Create a new migration:**
+```bash
+supabase migration new describe_your_change
+# Edit the generated file, then:
+supabase db push
+```
+
+**If a migration was already applied manually (SQL editor):**
+```bash
+supabase migration repair --status applied <timestamp>
+```
+
+**Check sync status:**
+```bash
+supabase migration list
+```
+
 ## CI
 GitHub Actions (`.github/workflows/daily_update.yml`) runs `python main.py --fetch` several times a day. Only commits the three crest map JSONs when they change. Does not commit `signals.db` or `index.html`.
 

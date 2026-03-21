@@ -5,8 +5,6 @@ Feature building, match evaluation, and team news enrichment.
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy.orm import Session
-
 from config import LeagueConfig
 from constants import (
     DIXON_COLES_MIN_FIXTURES,
@@ -14,7 +12,7 @@ from constants import (
     TEAM_NEWS_CUTOFF_HOURS,
     UCL_PROB_RATIO_CAP,
 )
-from db.queries import load_all_fixtures_df, load_h2h_fixtures_df
+import pandas as pd
 from models.evaluator import evaluate_match
 from models.features import (
     build_fixtures_dataframe,
@@ -33,11 +31,9 @@ logger = logging.getLogger(__name__)
 
 def build_features(
     raw_fixtures: list[dict],
-    engine,
     name_map: dict,
     league: LeagueConfig,
     cfg,
-    season: int,
 ) -> dict:
     """
     Builds feature inputs for the evaluation phase.
@@ -54,9 +50,28 @@ def build_features(
         fixtures_df["away_team"] = fixtures_df["away_team"].map(lambda n: league_map.get(n, n))
     league_avgs = compute_league_averages(fixtures_df)
     universal_names = name_map.get("universal_names", {})
-    all_fixtures_df = load_all_fixtures_df(engine, universal_names)
-    with Session(engine) as session:
-        h2h_fixtures_df = load_h2h_fixtures_df(session, league.key, season)
+    # Build all_fixtures_df (rest-day context) and h2h_fixtures_df from in-memory fixtures
+    norm = universal_names or {}
+    _empty_cols = ["fixture_date", "home_team", "away_team", "home_goals", "away_goals",
+                   "home_goals_eff", "away_goals_eff"]
+    if raw_fixtures:
+        all_fixtures_df = pd.DataFrame([{
+            "fixture_date": f.get("fixture_date"),
+            "home_team": norm.get(f["home_team"], f["home_team"]),
+            "away_team": norm.get(f["away_team"], f["away_team"]),
+            "home_goals": f.get("home_goals"),
+            "away_goals": f.get("away_goals"),
+            "home_xg": f.get("home_xg"),
+            "away_xg": f.get("away_xg"),
+        } for f in raw_fixtures])
+        all_fixtures_df["fixture_date"] = pd.to_datetime(all_fixtures_df["fixture_date"], utc=True)
+        all_fixtures_df["home_goals_eff"] = all_fixtures_df["home_xg"].where(
+            all_fixtures_df["home_xg"].notna(), all_fixtures_df["home_goals"])
+        all_fixtures_df["away_goals_eff"] = all_fixtures_df["away_xg"].where(
+            all_fixtures_df["away_xg"].notna(), all_fixtures_df["away_goals"])
+    else:
+        all_fixtures_df = pd.DataFrame(columns=_empty_cols)
+    h2h_fixtures_df = fixtures_df.copy() if not fixtures_df.empty else pd.DataFrame(columns=_empty_cols)
     logger.debug(
         "[%s] League averages — home goals: %.2f | away goals: %.2f",
         league.key, league_avgs["avg_home_goals"], league_avgs["avg_away_goals"],

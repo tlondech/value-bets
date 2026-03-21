@@ -366,14 +366,15 @@ export function renderCard(m, opts = {}) {
       : null)
     : null;
 
+  const locked = `<span class="text-gray-300 dark:text-gray-600 select-none">&bull;&bull;&bull;&bull;</span>`;
   const signalsRows = m.signals.map(b => `
     <tr class="border-t border-gray-100 dark:border-gray-700/50">
       <td class="py-1.5 pr-2">
         <div class="max-w-full"><span class="signal-label-tip inline-block max-w-full truncate px-2 py-0.5 rounded-full text-xs font-medium align-middle bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300" data-tip="${esc(b.outcome_label)}">${signalLabel(b)}</span></div>
       </td>
-      <td class="py-1.5 pr-2 text-right font-mono text-sm">${Number(b.odds).toFixed(2)}</td>
-      <td class="py-1.5 pr-2 text-right text-sm text-gray-500 dark:text-gray-400">${(b.true_prob * 100).toFixed(1)}%</td>
-      <td class="py-1.5 text-right text-sm font-semibold">${evLabel(b.ev)}</td>
+      <td class="py-1.5 pr-2 text-right font-mono text-sm">${b.odds != null ? Number(b.odds).toFixed(2) : locked}</td>
+      <td class="py-1.5 pr-2 text-right text-sm text-gray-500 dark:text-gray-400">${b.true_prob != null ? (b.true_prob * 100).toFixed(1) + "%" : locked}</td>
+      <td class="py-1.5 text-right text-sm font-semibold">${b.ev != null ? evLabel(b.ev) : locked}</td>
     </tr>`).join("");
 
   const bookmakerHref = !showResult

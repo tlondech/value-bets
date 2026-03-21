@@ -52,6 +52,125 @@ export async function startCheckout() {
   }
 }
 
+// ── Path A — New user welcome screen ──────────────────────────
+
+export function renderNewUserWelcome(session) {
+  const email = escHtml(session?.user?.email || "");
+  return `
+    <div class="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-6 text-center">
+      <div class="w-full max-w-sm">
+        <div class="mb-8">
+          <h1 class="text-3xl font-extrabold text-white mb-2">Welcome to Signal Arena</h1>
+          <p class="text-gray-400 text-sm">Predictive model outputs for football, tennis &amp; NBA.</p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-6 text-left">
+          <p class="text-sm font-semibold text-white mb-3">What you get</p>
+          <ul class="space-y-1.5 text-sm text-gray-400">
+            <li>&#x2713; Live +EV signals from predictive models</li>
+            <li>&#x2713; Odds, probabilities &amp; EV for every signal</li>
+            <li>&#x2713; Football, tennis &amp; NBA coverage</li>
+            <li>&#x2713; Full history &amp; analytics dashboard</li>
+          </ul>
+          <div class="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500">
+            ${TRIAL_DAYS} days free &middot; then €19.99/month &middot; cancel any time
+          </div>
+        </div>
+        <button id="new-user-trial-btn"
+          class="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors">
+          Start my free trial
+        </button>
+        <p id="new-user-error" class="hidden text-xs text-red-400 mt-3"></p>
+        <p class="text-xs text-gray-700 mt-4">Card required. You won't be charged until your trial ends.</p>
+        <p class="text-xs text-gray-700 mt-6">Signed in as ${email} &middot; <button id="new-user-signout" class="underline hover:text-gray-500">Sign out</button></p>
+      </div>
+    </div>`;
+}
+
+export function attachNewUserWelcomeListeners() {
+  document.getElementById("new-user-trial-btn")?.addEventListener("click", async () => {
+    const btn = document.getElementById("new-user-trial-btn");
+    btn.textContent = "Redirecting to checkout\u2026";
+    btn.disabled = true;
+    try {
+      const { data, error } = await sb.functions.invoke("create-checkout-session");
+      if (error) throw error;
+      window.location.href = data.url;
+    } catch (err) {
+      const errorEl = document.getElementById("new-user-error");
+      errorEl.textContent = (err.message || "Could not start checkout.") + " Please try again.";
+      errorEl.classList.remove("hidden");
+      btn.textContent = "Start my free trial";
+      btn.disabled = false;
+    }
+  });
+  document.getElementById("new-user-signout")?.addEventListener("click", signOut);
+}
+
+// ── Path B — Expired trial paywall ────────────────────────────
+
+export function renderExpiredPaywall(session) {
+  const email = escHtml(session?.user?.email || "");
+  return `
+    <div class="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-6 text-center">
+      <div class="w-full max-w-sm">
+        <div class="mb-8">
+          <div class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center mx-auto mb-4">
+            <svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <h1 class="text-2xl font-extrabold text-white mb-2">Your free trial has ended</h1>
+          <p class="text-gray-400 text-sm">Our models are analysing today's fixtures &mdash; subscribe to see today's signals.</p>
+        </div>
+        <button id="expired-subscribe-btn"
+          class="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors mb-3">
+          Subscribe &middot; &euro;19.99/month
+        </button>
+        <button id="expired-browse-btn"
+          class="w-full py-3 rounded-xl border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm transition-colors">
+          Browse with limited access &rarr;
+        </button>
+        <p id="expired-error" class="hidden text-xs text-red-400 mt-3"></p>
+        <p class="text-xs text-gray-700 mt-6">Signed in as ${email} &middot; <button id="expired-signout" class="underline hover:text-gray-500">Sign out</button></p>
+      </div>
+    </div>`;
+}
+
+export function attachExpiredPaywallListeners(onBrowse) {
+  document.getElementById("expired-subscribe-btn")?.addEventListener("click", async () => {
+    const btn = document.getElementById("expired-subscribe-btn");
+    btn.textContent = "Redirecting\u2026";
+    btn.disabled = true;
+    try {
+      const { data, error } = await sb.functions.invoke("create-checkout-session");
+      if (error) throw error;
+      window.location.href = data.url;
+    } catch (err) {
+      const errorEl = document.getElementById("expired-error");
+      errorEl.textContent = (err.message || "Could not start checkout.") + " Please try again.";
+      errorEl.classList.remove("hidden");
+      btn.textContent = "Subscribe \u00b7 \u20ac19.99/month";
+      btn.disabled = false;
+    }
+  });
+  document.getElementById("expired-browse-btn")?.addEventListener("click", onBrowse);
+  document.getElementById("expired-signout")?.addEventListener("click", signOut);
+}
+
+// ── Path C — Trial countdown banner ───────────────────────────
+
+export function renderTrialBanner(sub) {
+  const daysLeft = Math.ceil((new Date(sub.current_period_end) - Date.now()) / 86400000);
+  const dayWord  = daysLeft === 1 ? "day" : "days";
+  return `
+    <div id="trial-banner" class="bg-indigo-600 text-white text-sm text-center py-2 px-4 flex items-center justify-center gap-3 flex-wrap">
+      <span>Trial active &mdash; <strong>${daysLeft} ${dayWord} remaining</strong></span>
+      <a href="https://billing.stripe.com/p/login/eVq14o0pj88nfmafkL63K00" target="_blank" rel="noopener noreferrer"
+        class="underline font-semibold whitespace-nowrap">Upgrade now</a>
+      <button id="trial-banner-dismiss" class="ml-2 text-white/60 hover:text-white text-lg leading-none">&times;</button>
+    </div>`;
+}
+
 // ── Account menu (rendered into the header) ───────────────────
 
 export function renderAccountMenu(session, sub) {

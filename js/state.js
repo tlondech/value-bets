@@ -7,6 +7,7 @@ export const state = {
   // ── UI ──────────────────────────────────────────────────────
   mainTab:          "signals",  // "signals" | "history" | "analytics"
   burgerDrawerOpen: false,
+  teaserMode:       false,
 
   // ── Data ────────────────────────────────────────────────────
   signalsData: [],
