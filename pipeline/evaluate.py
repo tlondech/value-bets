@@ -1,5 +1,5 @@
 """
-Feature building, match evaluation, and team news enrichment.
+Feature building and match evaluation.
 """
 
 import logging
@@ -9,7 +9,6 @@ from config import LeagueConfig
 from constants import (
     DIXON_COLES_MIN_FIXTURES,
     DIXON_COLES_XI,
-    TEAM_NEWS_CUTOFF_HOURS,
     UCL_PROB_RATIO_CAP,
 )
 import pandas as pd
@@ -322,36 +321,3 @@ def evaluate_matches(
     return match_signals, n_skipped
 
 
-def enrich_with_news(signals: list[dict], cfg) -> None:
-    """
-    Fetches injury context for high-EV matches within 24h of kickoff.
-    Mutates signals in place.
-    """
-    from config import _LEAGUES_BY_KEY
-    from constants import EV_NEWS_THRESHOLD
-    from extractors.team_news import fetch_team_news
-
-    now_utc = datetime.now(timezone.utc)
-    for match in signals:
-        if not any(b["ev"] >= EV_NEWS_THRESHOLD for b in match["signals"]):
-            continue
-        kickoff = datetime.fromisoformat(match["kickoff"])
-        if kickoff.tzinfo is None:
-            kickoff = kickoff.replace(tzinfo=timezone.utc)
-        hours_until_kickoff = (kickoff - now_utc).total_seconds() / 3600
-        if hours_until_kickoff <= TEAM_NEWS_CUTOFF_HOURS:
-            league_key = match.get("league_key", "")
-            league_config = _LEAGUES_BY_KEY.get(league_key)
-            sport_type = league_config.sport_type if league_config else "football"
-            match["team_news"] = fetch_team_news(
-                match["home_team"], match["away_team"],
-                sport_type=sport_type,
-                league_key=league_key,
-            )
-            logger.info(
-                "[%s] Fetched injury context for %s vs %s (EV %.0f%%, kickoff in %.1fh)",
-                match["league_name"],
-                match["home_team"], match["away_team"],
-                max(b["ev"] for b in match["signals"]) * 100,
-                hours_until_kickoff,
-            )

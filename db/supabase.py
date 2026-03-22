@@ -770,7 +770,6 @@ def push_signals_to_supabase(
                 "agg_home":       m.get("agg_home"),
                 "agg_away":       m.get("agg_away"),
                 "leg1_result":    m.get("leg1_result"),
-                "team_news":      m.get("team_news"),
                 "sport":          m.get("sport", "football"),
                 "bookmaker_link": m.get("bookmaker_link"),
             })

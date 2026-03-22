@@ -194,8 +194,7 @@ All settings can be overridden via `.env`:
 │   ├── tennisdatauk_client.py       # tennis-data.co.uk CSVs (tennis settlement fallback)
 │   ├── odds.py                      # The Odds API client (1X2, O/U, spreads, tennis discovery)
 │   ├── stats.py                     # Stats processing utilities
-│   ├── espn_injuries_client.py      # ESPN injury data (no API key required)
-│   └── team_news.py                 # Injury context enrichment for high-EV signals (ESPN)
+│   └── espn_injuries_client.py      # ESPN injury data (no API key required)
 │
 ├── models/
 │   ├── features.py                  # Feature engineering (Dixon-Coles, H2H, fatigue)

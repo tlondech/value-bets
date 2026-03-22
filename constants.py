@@ -1,15 +1,4 @@
 # ---------------------------------------------------------------------------
-# Injury enrichment
-# ---------------------------------------------------------------------------
-
-# Minimum EV for a signal to trigger injury context fetching
-EV_NEWS_THRESHOLD = 0.20
-
-# Hours before kickoff within which injury context is fetched
-TEAM_NEWS_CUTOFF_HOURS = 24
-
-
-# ---------------------------------------------------------------------------
 # Fatigue & rest-day adjustments
 # ---------------------------------------------------------------------------
 

@@ -15,7 +15,7 @@ from typing import Protocol, runtime_checkable
 from config import LeagueConfig
 from models.nba_model import evaluate_basketball_match
 from models.tennis_model import evaluate_tennis_match
-from pipeline.evaluate import enrich_with_news, evaluate_matches
+from pipeline.evaluate import evaluate_matches
 from pipeline.helpers import is_live
 
 logger = logging.getLogger(__name__)
@@ -105,8 +105,6 @@ class FootballEvaluator:
         signals = [m for m in match_signals.values() if m["signals"]]
         for m in signals:
             m["signals"].sort(key=lambda b: b["ev"], reverse=True)
-
-        enrich_with_news(signals, cfg)
 
         if n_skipped:
             logger.warning(
@@ -328,7 +326,6 @@ class NBAEvaluator:
                 n_unmapped,
             )
 
-        enrich_with_news(signals, cfg)
         return signals
 
 

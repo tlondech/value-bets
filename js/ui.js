@@ -264,7 +264,6 @@ export function groupIntoMatches(rows) {
         agg_home:          row.agg_home,
         agg_away:          row.agg_away,
         leg1_result:       row.leg1_result,
-        team_news:         row.team_news || null,
         bookmaker_link:    row.bookmaker_link || null,
         actual_home_score: row.actual_home_score ?? null,
         actual_away_score: row.actual_away_score ?? null,
@@ -281,29 +280,6 @@ export function groupIntoMatches(rows) {
     });
   }
   return Array.from(map.values());
-}
-
-// ── Team news context panel ────────────────────────────────────
-function teamNewsPanel(m) {
-  const hasHighEV = m.signals.some(s => s.ev >= 0.20);
-  if (!hasHighEV || !m.team_news) return "";
-  const tn = m.team_news;
-  return `
-    <details class="border-t border-gray-100 dark:border-gray-800 news-details group">
-      <summary class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-indigo-600 dark:hover:text-indigo-400 select-none flex items-center gap-1.5 transition-colors">
-        <span class="news-arrow transition-transform duration-150">▶</span> Context (team news)
-      </summary>
-      <div class="px-4 pb-3 pt-1 space-y-2 text-xs">
-        <div class="flex gap-1.5">
-          <span class="font-semibold text-gray-700 dark:text-gray-300 shrink-0">${esc(m.home_team)}:</span>
-          <span class="text-gray-500 dark:text-gray-400">${esc(tn.home_summary || "No notable absences reported.")}</span>
-        </div>
-        <div class="flex gap-1.5">
-          <span class="font-semibold text-gray-700 dark:text-gray-300 shrink-0">${esc(m.away_team)}:</span>
-          <span class="text-gray-500 dark:text-gray-400">${esc(tn.away_summary || "No notable absences reported.")}</span>
-        </div>
-      </div>
-    </details>`;
 }
 
 // ── Render a single match card ─────────────────────────────────
@@ -444,7 +420,6 @@ export function renderCard(m, opts = {}) {
         <tbody>${signalsRows}</tbody>
       </table>
     </div>
-    ${teamNewsPanel(m)}
   </div>`;
 }
 
